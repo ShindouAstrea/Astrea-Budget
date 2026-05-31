@@ -1,30 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:astrea_budget/core/utils/formatters.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:astrea_budget/main.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  setUpAll(() => initializeDateFormatting('es_CL'));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  group('Formatters', () {
+    test('formatea CLP sin decimales', () {
+      expect(Formatters.currency(1250000), r'$1.250.000');
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('parsea montos ignorando separadores y símbolos', () {
+      expect(Formatters.parseAmount(r'$1.250.000'), 1250000);
+      expect(Formatters.parseAmount('abc'), isNull);
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('signedCurrency antepone el signo correcto', () {
+      expect(Formatters.signedCurrency(1000, isIncome: true), r'+$1.000');
+      expect(Formatters.signedCurrency(1000, isIncome: false), r'-$1.000');
+    });
   });
 }

@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/josesilva/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/**)",
+      "Bash(python3 scripts/search.py \"personal finance budgeting fintech app trustworthy modern minimal\" --design-system -f markdown -p \"Astrea Budget\")",
+      "Bash(flutter pub *)",
+      "Read(//Users/josesilva/.pub-cache/hosted/pub.dev/**)",
+      "Bash(awk 'NR>=7 && NR<=121' riverpod_annotation.dart)",
+      "Bash(awk 'NR>=7 && NR<=120 && /^        Ref$|^        Ref,|Ref$/' ~/.pub-cache/hosted/pub.dev/riverpod_annotation-2.6.1/lib/riverpod_annotation.dart)",
+      "Bash(grep -nE \"^\\\\s+Ref,?\\\\s*$\" ~/.pub-cache/hosted/pub.dev/riverpod_annotation-2.6.1/lib/riverpod_annotation.dart)",
+      "Bash(grep -nE \"^\\\\s*Ref,?\\\\s*$|show.*\\\\bRef\\\\b\" ~/.pub-cache/hosted/pub.dev/riverpod-2.6.1/lib/riverpod.dart)",
+      "Bash(awk 'NR>=7 && NR<=120' ~/.pub-cache/hosted/pub.dev/riverpod_annotation-2.6.1/lib/riverpod_annotation.dart)",
+      "Bash(dart run *)",
+      "Bash(grep -iB0 \"analyzer_plugin\")",
+      "Bash(grep -iB1 \"custom_lint_core\\\\|custom_lint \")",
+      "Bash(curl -s https://pub.dev/api/packages/analyzer_plugin)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\([v['version'] for v in d['versions'][-8:]]\\)\")",
+      "Bash(curl -s https://pub.dev/api/packages/custom_lint_core)",
+      "Bash(curl -s https://pub.dev/api/packages/riverpod_generator)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('latest',d['latest']['version']\\); print\\([v['version'] for v in d['versions'][-6:]]\\)\")",
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)",
+      "Bash(which flutter; echo \"---\"; cat ~/.zshrc 2>/dev/null | grep -iE \"rbenv|rvm|path|ruby|pod|flutter|homebrew|brew\" | head -40)",
+      "Read(//Users/josesilva/**)",
+      "Bash(echo \"=== .zprofile ===\"; grep -iE \"brew|homebrew|path\" ~/.zprofile 2>/dev/null; echo \"=== .zshenv ===\"; grep -iE \"brew|homebrew|path\" ~/.zshenv 2>/dev/null; echo \"=== /etc/paths ===\"; cat /etc/paths 2>/dev/null)",
+      "Read(//private/etc/**)",
+      "Bash(echo -n '__TRACKED_VAR__ -> latest ')",
+      "Bash(curl -s https://pub.dev/api/packages/__TRACKED_VAR__)"
+    ],
+    "additionalDirectories": [
+      "/Users/josesilva"
+    ]
+  }
+}

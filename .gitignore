@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Variables de entorno (Supabase). NO commitear las llaves reales.
+# Copia .env.example a .env y completa tus valores.
+.env
+
 # Symbolication related
 app.*.symbols
 
