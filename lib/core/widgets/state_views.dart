@@ -4,13 +4,19 @@ import 'package:flutter/material.dart';
 class EmptyStateView extends StatelessWidget {
   const EmptyStateView({
     super.key,
-    required this.icon,
+    this.icon,
+    this.illustration,
     required this.title,
     this.message,
     this.action,
-  });
+  }) : assert(icon != null || illustration != null,
+            'Provee un icon o una illustration');
 
-  final IconData icon;
+  /// Icono de Material (fallback). Ignorado si se entrega [illustration].
+  final IconData? icon;
+
+  /// Ilustración de marca (p. ej. [BrandEmptyArt]). Tiene prioridad sobre [icon].
+  final Widget? illustration;
   final String title;
   final String? message;
   final Widget? action;
@@ -24,14 +30,17 @@ class EmptyStateView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
+            if (illustration != null)
+              illustration!
+            else
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 40, color: scheme.primary),
               ),
-              child: Icon(icon, size: 40, color: scheme.primary),
-            ),
             const SizedBox(height: 20),
             Text(
               title,

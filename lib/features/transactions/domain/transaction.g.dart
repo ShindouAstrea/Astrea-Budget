@@ -11,12 +11,15 @@ _$TransactionModelImpl _$$TransactionModelImplFromJson(
 ) => _$TransactionModelImpl(
   id: json['id'] as String,
   userId: json['user_id'] as String,
+  householdId: json['household_id'] as String?,
+  accountId: json['account_id'] as String?,
   type: $enumDecode(_$TransactionTypeEnumMap, json['type']),
   amount: (json['amount'] as num).toDouble(),
   date: DateTime.parse(json['date'] as String),
   description: json['description'] as String?,
   categoryId: json['category_id'] as String?,
   serviceId: json['service_id'] as String?,
+  transferGroupId: json['transfer_group_id'] as String?,
 );
 
 Map<String, dynamic> _$$TransactionModelImplToJson(
@@ -24,12 +27,15 @@ Map<String, dynamic> _$$TransactionModelImplToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'user_id': instance.userId,
+  'household_id': instance.householdId,
+  'account_id': instance.accountId,
   'type': _$TransactionTypeEnumMap[instance.type]!,
   'amount': instance.amount,
   'date': instance.date.toIso8601String(),
   'description': instance.description,
   'category_id': instance.categoryId,
   'service_id': instance.serviceId,
+  'transfer_group_id': instance.transferGroupId,
 };
 
 const _$TransactionTypeEnumMap = {

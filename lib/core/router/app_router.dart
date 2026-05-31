@@ -8,8 +8,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
+import '../../features/accounts/presentation/accounts_page.dart';
+import '../../features/budgets/presentation/budgets_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
+import '../../features/households/presentation/sharing_page.dart';
+import '../../features/recurring/presentation/recurring_incomes_page.dart';
+import '../../features/savings/presentation/savings_page.dart';
 import '../../features/security/presentation/lock_page.dart';
 import '../../features/security/presentation/security_controller.dart';
 import '../../features/services/domain/service.dart';
@@ -17,6 +22,7 @@ import '../../features/services/presentation/service_detail_page.dart';
 import '../../features/services/presentation/service_form_page.dart';
 import '../../features/services/presentation/services_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
+import '../../features/trends/presentation/trends_page.dart';
 import '../../features/transactions/domain/transaction.dart';
 import '../../features/transactions/presentation/transaction_form_page.dart';
 import '../../features/transactions/presentation/transactions_page.dart';
@@ -120,6 +126,36 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.categories.path,
         name: AppRoute.categories.name,
         builder: (_, _) => const CategoriesPage(),
+      ),
+      GoRoute(
+        path: AppRoute.accounts.path,
+        name: AppRoute.accounts.name,
+        builder: (_, _) => const AccountsPage(),
+      ),
+      GoRoute(
+        path: AppRoute.sharing.path,
+        name: AppRoute.sharing.name,
+        builder: (_, _) => const SharingPage(),
+      ),
+      GoRoute(
+        path: AppRoute.budgets.path,
+        name: AppRoute.budgets.name,
+        builder: (_, _) => const BudgetsPage(),
+      ),
+      GoRoute(
+        path: AppRoute.trends.path,
+        name: AppRoute.trends.name,
+        builder: (_, _) => const TrendsPage(),
+      ),
+      GoRoute(
+        path: AppRoute.recurringIncomes.path,
+        name: AppRoute.recurringIncomes.name,
+        builder: (_, _) => const RecurringIncomesPage(),
+      ),
+      GoRoute(
+        path: AppRoute.savings.path,
+        name: AppRoute.savings.name,
+        builder: (_, _) => const SavingsPage(),
       ),
 
       // Shell con barra inferior (4 pestañas con estado preservado).

@@ -13,16 +13,20 @@ class TransactionModel with _$TransactionModel {
   const factory TransactionModel({
     required String id,
     @JsonKey(name: 'user_id') required String userId,
+    @JsonKey(name: 'household_id') String? householdId,
+    @JsonKey(name: 'account_id') String? accountId,
     required TransactionType type,
     required double amount,
     required DateTime date,
     String? description,
     @JsonKey(name: 'category_id') String? categoryId,
     @JsonKey(name: 'service_id') String? serviceId,
+    @JsonKey(name: 'transfer_group_id') String? transferGroupId,
   }) = _TransactionModel;
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) =>
       _$TransactionModelFromJson(json);
 
   bool get isIncome => type.isIncome;
+  bool get isTransfer => transferGroupId != null;
 }

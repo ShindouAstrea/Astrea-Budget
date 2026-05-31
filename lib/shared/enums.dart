@@ -66,3 +66,33 @@ enum PaymentStatus {
   static PaymentStatus fromWire(String value) =>
       values.firstWhere((e) => e.wire == value);
 }
+
+enum AccountType {
+  efectivo('efectivo', 'Efectivo'),
+  debito('debito', 'Débito'),
+  credito('credito', 'Crédito'),
+  ahorro('ahorro', 'Ahorro');
+
+  const AccountType(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  bool get isCredit => this == AccountType.credito;
+
+  static AccountType fromWire(String value) =>
+      values.firstWhere((e) => e.wire == value);
+}
+
+enum HouseholdRole {
+  owner('owner', 'Propietario'),
+  member('member', 'Miembro');
+
+  const HouseholdRole(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  bool get isOwner => this == HouseholdRole.owner;
+
+  static HouseholdRole fromWire(String value) =>
+      values.firstWhere((e) => e.wire == value);
+}

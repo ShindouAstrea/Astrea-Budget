@@ -51,12 +51,12 @@ class SecurityRepository {
 
   Future<bool> authenticateBiometric() async {
     try {
+      // local_auth 3.x: las opciones son parámetros planos (antes
+      // AuthenticationOptions); `stickyAuth` se llama `persistAcrossBackgrounding`.
       return await _localAuth.authenticate(
         localizedReason: 'Desbloquea Astrea Budget',
-        options: const AuthenticationOptions(
-          biometricOnly: false,
-          stickyAuth: true,
-        ),
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
       );
     } catch (_) {
       return false;
@@ -75,10 +75,10 @@ class SecurityRepository {
 }
 
 final securityRepositoryProvider = Provider<SecurityRepository>(
+  // flutter_secure_storage 10.x usa cifrado moderno por defecto en Android
+  // (el antiguo `encryptedSharedPreferences` quedó deprecado y migra solo).
   (ref) => SecurityRepository(
-    const FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    ),
+    const FlutterSecureStorage(),
     LocalAuthentication(),
   ),
 );

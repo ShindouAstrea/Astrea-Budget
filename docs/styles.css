@@ -1,0 +1,194 @@
+/* Astrea Budget — páginas legales (privacidad / eliminación de datos)
+   Branding por código: paleta azul confianza (#2563EB) + naranja CTA (#F97316).
+   Sin dependencias externas: 100% estático para GitHub Pages. */
+
+:root {
+  --brand: #2563eb;
+  --accent: #f97316;
+  --bg: #0b1120;
+  --bg-soft: #111a2e;
+  --surface: #16213a;
+  --surface-2: #1d2b48;
+  --border: #27375c;
+  --text: #e8eefc;
+  --text-dim: #9fb0d0;
+  --income: #4ade80;
+  --radius: 18px;
+  --maxw: 820px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(37, 99, 235, 0.25), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(249, 115, 22, 0.12), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: #7aa7ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
+
+/* ---------- Header / branding ---------- */
+header.site {
+  padding: 40px 0 18px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand .logo { width: 52px; height: 52px; flex: none; }
+.brand .name {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.brand .name span { color: var(--accent); }
+.tagline { color: var(--text-dim); margin: 6px 0 0; font-size: 0.95rem; }
+
+/* ---------- Hero card ---------- */
+.hero {
+  margin: 26px 0 8px;
+  padding: 30px 28px;
+  background: linear-gradient(160deg, var(--surface), var(--bg-soft));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.hero h1 { margin: 0 0 8px; font-size: 1.9rem; letter-spacing: -0.02em; }
+.eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.meta { color: var(--text-dim); font-size: 0.88rem; margin-top: 14px; }
+
+/* ---------- Content ---------- */
+main { padding: 14px 0 60px; }
+h2 {
+  margin: 34px 0 10px;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 20px;
+}
+h2 .num {
+  color: var(--brand);
+  font-weight: 700;
+  margin-right: 8px;
+}
+h3 { margin: 22px 0 6px; font-size: 1.02rem; }
+p, li { color: #d7e1f5; }
+ul { padding-left: 22px; }
+li { margin: 6px 0; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  margin: 18px 0;
+}
+.card.accent { border-color: rgba(249, 115, 22, 0.5); }
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 0.94rem;
+}
+table.data th, table.data td {
+  text-align: left;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+table.data th { color: var(--text-dim); font-weight: 600; }
+
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(37, 99, 235, 0.18);
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  color: #aac4ff;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.96rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: #1d4ed8; text-decoration: none; }
+.btn-accent { background: var(--accent); color: #1a1206; }
+.btn-accent:hover { background: #fb8c3a; text-decoration: none; }
+.btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--surface-2); text-decoration: none; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+
+/* ---------- Steps ---------- */
+ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 16px 0; }
+ol.steps li {
+  position: relative;
+  padding: 14px 16px 14px 56px;
+  margin: 10px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+ol.steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff; font-weight: 700; font-size: 0.9rem;
+}
+
+/* ---------- Footer ---------- */
+footer.site {
+  border-top: 1px solid var(--border);
+  padding: 26px 0 50px;
+  color: var(--text-dim);
+  font-size: 0.86rem;
+}
+footer.site a { color: var(--text-dim); }
+.foot-links { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 10px; }
+
+code.inline {
+  background: var(--surface-2);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  color: #ffd9b0;
+}
+
+@media (max-width: 560px) {
+  .hero { padding: 24px 20px; }
+  .hero h1 { font-size: 1.55rem; }
+}

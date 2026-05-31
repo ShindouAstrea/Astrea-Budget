@@ -6,8 +6,16 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/month_selector.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../budgets/presentation/dashboard_budgets_section.dart';
+import '../../households/presentation/household_switcher.dart';
+import '../../projection/presentation/dashboard_projection_section.dart';
+import '../../recurring/presentation/recurring_income_controller.dart';
+import '../../savings/presentation/dashboard_savings_section.dart';
+import '../../trends/presentation/dashboard_trends_section.dart';
+import '../../notifications/presentation/notifications_controller.dart';
 import '../../services/domain/service_payment.dart';
 import '../../services/presentation/services_controller.dart';
 import '../../transactions/presentation/transactions_controller.dart';
@@ -20,10 +28,27 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(monthSummaryProvider);
 
+    // Cuando los pagos del mes se cargan/regeneran, reprograma los
+    // recordatorios de notificación (si están activados).
+    ref.listen(monthlyPaymentsProvider, (_, next) {
+      next.whenData(
+        (_) => ref.read(notificationsControllerProvider.notifier).refresh(),
+      );
+    });
+
+    // Genera los ingresos recurrentes vencidos al abrir; si registró alguno,
+    // refresca los movimientos del mes (cascada al resumen/proyección).
+    ref.listen(recurringIncomeGenerationProvider, (_, next) {
+      if (next.valueOrNull == true) {
+        ref.invalidate(monthlyTransactionsProvider);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Astrea Budget'),
         actions: [
+          const HouseholdIndicator(),
           IconButton(
             onPressed: () => context.goNamed(AppRoute.settings.name),
             icon: const Icon(Icons.settings_outlined),
@@ -52,7 +77,14 @@ class DashboardPage extends ConsumerWidget {
               ),
               data: (summary) => _SummarySection(summary: summary),
             ),
+            const SizedBox(height: 16),
+            const DashboardProjectionSection(),
             const SizedBox(height: 24),
+            const DashboardBudgetsSection(),
+            const SizedBox(height: 24),
+            const DashboardTrendsSection(),
+            const SizedBox(height: 24),
+            const DashboardSavingsSection(),
             const _UpcomingPaymentsSection(),
           ],
         ),
@@ -212,11 +244,21 @@ class _CategoryChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (spending.isEmpty) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-          child: Center(
-            child: Text('Aún no hay gastos este mes'),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandEmptyArt(EmptyArt.chart, size: 96),
+              const SizedBox(height: 12),
+              Text(
+                'Aún no hay gastos este mes',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
           ),
         ),
       );

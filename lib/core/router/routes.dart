@@ -17,7 +17,13 @@ enum AppRoute {
   transactionForm('/transaction-form', 'transaction-form'),
   serviceForm('/service-form', 'service-form'),
   serviceDetail('/service-detail', 'service-detail'),
-  categories('/categories', 'categories');
+  categories('/categories', 'categories'),
+  accounts('/accounts', 'accounts'),
+  sharing('/sharing', 'sharing'),
+  budgets('/budgets', 'budgets'),
+  trends('/trends', 'trends'),
+  recurringIncomes('/recurring-incomes', 'recurring-incomes'),
+  savings('/savings', 'savings');
 
   const AppRoute(this.path, this.name);
   final String path;

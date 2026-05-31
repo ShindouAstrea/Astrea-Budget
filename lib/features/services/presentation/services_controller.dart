@@ -1,18 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/budget_cycle.dart';
 import '../../../shared/enums.dart';
 import '../../../shared/selected_month_provider.dart';
+import '../../accounts/presentation/accounts_controller.dart';
+import '../../households/presentation/household_controller.dart';
 import '../../transactions/presentation/transactions_controller.dart';
 import '../data/service_repository.dart';
 import '../domain/service.dart';
 import '../domain/service_payment.dart';
 
-/// Listado de servicios del usuario con CRUD.
+/// Listado de servicios del household activo con CRUD.
 class ServicesNotifier extends AsyncNotifier<List<Service>> {
   ServiceRepository get _repo => ref.read(serviceRepositoryProvider);
 
   @override
-  Future<List<Service>> build() => _repo.fetchServices();
+  Future<List<Service>> build() async {
+    final householdId = await ref.watch(activeHouseholdIdProvider.future);
+    return _repo.fetchServices(householdId);
+  }
 
   Future<void> add({
     required String name,
@@ -22,7 +28,9 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     int? billingDay,
     required ServiceFrequency frequency,
   }) async {
+    final householdId = await ref.read(activeHouseholdIdProvider.future);
     await _repo.createService(
+      householdId: householdId,
       name: name,
       type: type,
       category: category,
@@ -70,14 +78,25 @@ final servicesProvider =
   ServicesNotifier.new,
 );
 
-/// Pagos del mes seleccionado. Antes de leerlos, genera las instancias de los
-/// servicios fijos del mes (idempotente).
+/// Pagos del mes financiero seleccionado. Antes de leerlos genera las
+/// instancias de los servicios fijos (idempotente). La ventana del mes
+/// financiero puede abarcar dos meses calendario (p. ej. con corte 28, junio va
+/// del 28-may al 27-jun), así que se generan ambos.
 final monthlyPaymentsProvider =
     FutureProvider<List<ServicePayment>>((ref) async {
+  final householdId = await ref.watch(activeHouseholdIdProvider.future);
   final month = ref.watch(selectedMonthProvider);
+  final cutoff = ref.watch(budgetCutoffProvider);
   final repo = ref.watch(serviceRepositoryProvider);
-  await repo.generateMonthlyPayments(month);
-  return repo.fetchPaymentsForMonth(month);
+  final range = BudgetCycle.bounds(month, cutoff);
+
+  await repo.generateMonthlyPayments(householdId, month);
+  final startMonth = DateTime(range.start.year, range.start.month);
+  if (startMonth != DateTime(month.year, month.month)) {
+    await repo.generateMonthlyPayments(householdId, startMonth);
+  }
+
+  return repo.fetchPaymentsBetween(householdId, range.start, range.end);
 });
 
 /// Historial de pagos de un servicio concreto.
@@ -92,9 +111,14 @@ class PaymentActions {
   final Ref ref;
 
   Future<void> markAsPaid(ServicePayment payment, {String? categoryId}) async {
-    await ref
-        .read(serviceRepositoryProvider)
-        .markAsPaid(payment: payment, categoryId: categoryId);
+    final householdId = await ref.read(activeHouseholdIdProvider.future);
+    final account = await ref.read(activeAccountProvider.future);
+    await ref.read(serviceRepositoryProvider).markAsPaid(
+          householdId: householdId,
+          payment: payment,
+          categoryId: categoryId,
+          accountId: account?.id,
+        );
     _refresh(payment.serviceId);
   }
 
@@ -108,7 +132,9 @@ class PaymentActions {
     required DateTime dueDate,
     required int amount,
   }) async {
+    final householdId = await ref.read(activeHouseholdIdProvider.future);
     await ref.read(serviceRepositoryProvider).createPayment(
+          householdId: householdId,
           serviceId: serviceId,
           dueDate: dueDate,
           amount: amount,
@@ -119,8 +145,9 @@ class PaymentActions {
   void _refresh(String serviceId) {
     ref.invalidate(monthlyPaymentsProvider);
     ref.invalidate(servicePaymentsProvider(serviceId));
-    // El gasto creado/eliminado afecta el listado de transacciones del mes.
+    // El gasto creado/eliminado afecta el listado de transacciones y saldos.
     ref.invalidate(monthlyTransactionsProvider);
+    ref.invalidate(accountBalancesProvider);
   }
 }
 

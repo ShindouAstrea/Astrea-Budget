@@ -24,6 +24,10 @@ mixin _$TransactionModel {
   String get id => throw _privateConstructorUsedError;
   @JsonKey(name: 'user_id')
   String get userId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'household_id')
+  String? get householdId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'account_id')
+  String? get accountId => throw _privateConstructorUsedError;
   TransactionType get type => throw _privateConstructorUsedError;
   double get amount => throw _privateConstructorUsedError;
   DateTime get date => throw _privateConstructorUsedError;
@@ -32,6 +36,8 @@ mixin _$TransactionModel {
   String? get categoryId => throw _privateConstructorUsedError;
   @JsonKey(name: 'service_id')
   String? get serviceId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'transfer_group_id')
+  String? get transferGroupId => throw _privateConstructorUsedError;
 
   /// Serializes this TransactionModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -53,12 +59,15 @@ abstract class $TransactionModelCopyWith<$Res> {
   $Res call({
     String id,
     @JsonKey(name: 'user_id') String userId,
+    @JsonKey(name: 'household_id') String? householdId,
+    @JsonKey(name: 'account_id') String? accountId,
     TransactionType type,
     double amount,
     DateTime date,
     String? description,
     @JsonKey(name: 'category_id') String? categoryId,
     @JsonKey(name: 'service_id') String? serviceId,
+    @JsonKey(name: 'transfer_group_id') String? transferGroupId,
   });
 }
 
@@ -79,12 +88,15 @@ class _$TransactionModelCopyWithImpl<$Res, $Val extends TransactionModel>
   $Res call({
     Object? id = null,
     Object? userId = null,
+    Object? householdId = freezed,
+    Object? accountId = freezed,
     Object? type = null,
     Object? amount = null,
     Object? date = null,
     Object? description = freezed,
     Object? categoryId = freezed,
     Object? serviceId = freezed,
+    Object? transferGroupId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -96,6 +108,14 @@ class _$TransactionModelCopyWithImpl<$Res, $Val extends TransactionModel>
                 ? _value.userId
                 : userId // ignore: cast_nullable_to_non_nullable
                       as String,
+            householdId: freezed == householdId
+                ? _value.householdId
+                : householdId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            accountId: freezed == accountId
+                ? _value.accountId
+                : accountId // ignore: cast_nullable_to_non_nullable
+                      as String?,
             type: null == type
                 ? _value.type
                 : type // ignore: cast_nullable_to_non_nullable
@@ -120,6 +140,10 @@ class _$TransactionModelCopyWithImpl<$Res, $Val extends TransactionModel>
                 ? _value.serviceId
                 : serviceId // ignore: cast_nullable_to_non_nullable
                       as String?,
+            transferGroupId: freezed == transferGroupId
+                ? _value.transferGroupId
+                : transferGroupId // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -138,12 +162,15 @@ abstract class _$$TransactionModelImplCopyWith<$Res>
   $Res call({
     String id,
     @JsonKey(name: 'user_id') String userId,
+    @JsonKey(name: 'household_id') String? householdId,
+    @JsonKey(name: 'account_id') String? accountId,
     TransactionType type,
     double amount,
     DateTime date,
     String? description,
     @JsonKey(name: 'category_id') String? categoryId,
     @JsonKey(name: 'service_id') String? serviceId,
+    @JsonKey(name: 'transfer_group_id') String? transferGroupId,
   });
 }
 
@@ -163,12 +190,15 @@ class __$$TransactionModelImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? userId = null,
+    Object? householdId = freezed,
+    Object? accountId = freezed,
     Object? type = null,
     Object? amount = null,
     Object? date = null,
     Object? description = freezed,
     Object? categoryId = freezed,
     Object? serviceId = freezed,
+    Object? transferGroupId = freezed,
   }) {
     return _then(
       _$TransactionModelImpl(
@@ -180,6 +210,14 @@ class __$$TransactionModelImplCopyWithImpl<$Res>
             ? _value.userId
             : userId // ignore: cast_nullable_to_non_nullable
                   as String,
+        householdId: freezed == householdId
+            ? _value.householdId
+            : householdId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        accountId: freezed == accountId
+            ? _value.accountId
+            : accountId // ignore: cast_nullable_to_non_nullable
+                  as String?,
         type: null == type
             ? _value.type
             : type // ignore: cast_nullable_to_non_nullable
@@ -204,6 +242,10 @@ class __$$TransactionModelImplCopyWithImpl<$Res>
             ? _value.serviceId
             : serviceId // ignore: cast_nullable_to_non_nullable
                   as String?,
+        transferGroupId: freezed == transferGroupId
+            ? _value.transferGroupId
+            : transferGroupId // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -215,12 +257,15 @@ class _$TransactionModelImpl extends _TransactionModel {
   const _$TransactionModelImpl({
     required this.id,
     @JsonKey(name: 'user_id') required this.userId,
+    @JsonKey(name: 'household_id') this.householdId,
+    @JsonKey(name: 'account_id') this.accountId,
     required this.type,
     required this.amount,
     required this.date,
     this.description,
     @JsonKey(name: 'category_id') this.categoryId,
     @JsonKey(name: 'service_id') this.serviceId,
+    @JsonKey(name: 'transfer_group_id') this.transferGroupId,
   }) : super._();
 
   factory _$TransactionModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -231,6 +276,12 @@ class _$TransactionModelImpl extends _TransactionModel {
   @override
   @JsonKey(name: 'user_id')
   final String userId;
+  @override
+  @JsonKey(name: 'household_id')
+  final String? householdId;
+  @override
+  @JsonKey(name: 'account_id')
+  final String? accountId;
   @override
   final TransactionType type;
   @override
@@ -245,10 +296,13 @@ class _$TransactionModelImpl extends _TransactionModel {
   @override
   @JsonKey(name: 'service_id')
   final String? serviceId;
+  @override
+  @JsonKey(name: 'transfer_group_id')
+  final String? transferGroupId;
 
   @override
   String toString() {
-    return 'TransactionModel(id: $id, userId: $userId, type: $type, amount: $amount, date: $date, description: $description, categoryId: $categoryId, serviceId: $serviceId)';
+    return 'TransactionModel(id: $id, userId: $userId, householdId: $householdId, accountId: $accountId, type: $type, amount: $amount, date: $date, description: $description, categoryId: $categoryId, serviceId: $serviceId, transferGroupId: $transferGroupId)';
   }
 
   @override
@@ -258,6 +312,10 @@ class _$TransactionModelImpl extends _TransactionModel {
             other is _$TransactionModelImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.userId, userId) || other.userId == userId) &&
+            (identical(other.householdId, householdId) ||
+                other.householdId == householdId) &&
+            (identical(other.accountId, accountId) ||
+                other.accountId == accountId) &&
             (identical(other.type, type) || other.type == type) &&
             (identical(other.amount, amount) || other.amount == amount) &&
             (identical(other.date, date) || other.date == date) &&
@@ -266,7 +324,9 @@ class _$TransactionModelImpl extends _TransactionModel {
             (identical(other.categoryId, categoryId) ||
                 other.categoryId == categoryId) &&
             (identical(other.serviceId, serviceId) ||
-                other.serviceId == serviceId));
+                other.serviceId == serviceId) &&
+            (identical(other.transferGroupId, transferGroupId) ||
+                other.transferGroupId == transferGroupId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -275,12 +335,15 @@ class _$TransactionModelImpl extends _TransactionModel {
     runtimeType,
     id,
     userId,
+    householdId,
+    accountId,
     type,
     amount,
     date,
     description,
     categoryId,
     serviceId,
+    transferGroupId,
   );
 
   /// Create a copy of TransactionModel
@@ -304,12 +367,15 @@ abstract class _TransactionModel extends TransactionModel {
   const factory _TransactionModel({
     required final String id,
     @JsonKey(name: 'user_id') required final String userId,
+    @JsonKey(name: 'household_id') final String? householdId,
+    @JsonKey(name: 'account_id') final String? accountId,
     required final TransactionType type,
     required final double amount,
     required final DateTime date,
     final String? description,
     @JsonKey(name: 'category_id') final String? categoryId,
     @JsonKey(name: 'service_id') final String? serviceId,
+    @JsonKey(name: 'transfer_group_id') final String? transferGroupId,
   }) = _$TransactionModelImpl;
   const _TransactionModel._() : super._();
 
@@ -321,6 +387,12 @@ abstract class _TransactionModel extends TransactionModel {
   @override
   @JsonKey(name: 'user_id')
   String get userId;
+  @override
+  @JsonKey(name: 'household_id')
+  String? get householdId;
+  @override
+  @JsonKey(name: 'account_id')
+  String? get accountId;
   @override
   TransactionType get type;
   @override
@@ -335,6 +407,9 @@ abstract class _TransactionModel extends TransactionModel {
   @override
   @JsonKey(name: 'service_id')
   String? get serviceId;
+  @override
+  @JsonKey(name: 'transfer_group_id')
+  String? get transferGroupId;
 
   /// Create a copy of TransactionModel
   /// with the given fields replaced by the non-null parameter values.

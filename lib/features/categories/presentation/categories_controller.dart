@@ -1,15 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/enums.dart';
+import '../../households/presentation/household_controller.dart';
 import '../data/category_repository.dart';
 import '../domain/category.dart';
 
-/// Lista de categorías del usuario con operaciones CRUD.
+/// Lista de categorías del household activo con operaciones CRUD.
 class CategoriesNotifier extends AsyncNotifier<List<Category>> {
   CategoryRepository get _repo => ref.read(categoryRepositoryProvider);
 
   @override
-  Future<List<Category>> build() => _repo.fetchAll();
+  Future<List<Category>> build() async {
+    final householdId = await ref.watch(activeHouseholdIdProvider.future);
+    return _repo.fetchAll(householdId);
+  }
 
   Future<void> add({
     required String name,
@@ -17,7 +21,14 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
     required String icon,
     required String color,
   }) async {
-    await _repo.create(name: name, type: type, icon: icon, color: color);
+    final householdId = await ref.read(activeHouseholdIdProvider.future);
+    await _repo.create(
+      householdId: householdId,
+      name: name,
+      type: type,
+      icon: icon,
+      color: color,
+    );
     ref.invalidateSelf();
     await future;
   }

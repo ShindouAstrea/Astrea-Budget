@@ -19,13 +19,18 @@ class TransactionRepository {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
-  /// Transacciones de un mes (desde el día 1 hasta el último día inclusive).
-  Future<List<TransactionModel>> fetchForMonth(DateTime month) async {
-    final start = DateTime(month.year, month.month, 1);
-    final end = DateTime(month.year, month.month + 1, 1);
+  /// Transacciones en el rango `[start, end)` (límites del mes financiero).
+  /// Excluye las transferencias entre cuentas (no son ingreso/gasto real).
+  Future<List<TransactionModel>> fetchBetween(
+    String householdId,
+    DateTime start,
+    DateTime end,
+  ) async {
     final rows = await _client
         .from('transactions')
         .select()
+        .eq('household_id', householdId)
+        .isFilter('transfer_group_id', null)
         .gte('date', _date(start))
         .lt('date', _date(end))
         .order('date', ascending: false)
@@ -34,6 +39,8 @@ class TransactionRepository {
   }
 
   Future<TransactionModel> create({
+    required String householdId,
+    String? accountId,
     required TransactionType type,
     required int amount,
     required DateTime date,
@@ -44,7 +51,9 @@ class TransactionRepository {
     final row = await _client
         .from('transactions')
         .insert({
+          'household_id': householdId,
           'user_id': _uid,
+          'account_id': accountId,
           'type': type.wire,
           'amount': amount,
           'date': _date(date),
@@ -64,6 +73,7 @@ class TransactionRepository {
     required DateTime date,
     String? description,
     String? categoryId,
+    String? accountId,
   }) async {
     final row = await _client
         .from('transactions')
@@ -73,6 +83,7 @@ class TransactionRepository {
           'date': _date(date),
           'description': description,
           'category_id': categoryId,
+          'account_id': accountId,
         })
         .eq('id', id)
         .select()

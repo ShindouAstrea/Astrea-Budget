@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/config/prefs_provider.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
+  // Mantiene el splash nativo visible durante toda la inicialización
+  // (Supabase, prefs, localización) en vez de ocultarse al primer frame.
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   // Carga las variables de entorno desde el archivo .env.
   await Env.load();
@@ -15,9 +22,14 @@ Future<void> main() async {
   // Datos de localización para es_CL (formato de fechas/números).
   await initializeDateFormatting('es_CL');
 
+  // Preferencias locales (modo de tema y paleta), leídas de forma síncrona
+  // después por el ThemeController vía sharedPreferencesProvider.
+  final prefs = await SharedPreferences.getInstance();
+
   if (!Env.isConfigured) {
     // Falta configurar Supabase: mostramos una pantalla guía en vez de crashear.
     runApp(const _MissingConfigApp());
+    widgetsBinding.addPostFrameCallback((_) => FlutterNativeSplash.remove());
     return;
   }
 
@@ -26,7 +38,15 @@ Future<void> main() async {
     anonKey: Env.supabaseAnonKey,
   );
 
-  runApp(const ProviderScope(child: AstreaBudgetApp()));
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const AstreaBudgetApp(),
+    ),
+  );
+
+  // Quita el splash una vez pintado el primer frame de la app.
+  widgetsBinding.addPostFrameCallback((_) => FlutterNativeSplash.remove());
 }
 
 /// Pantalla mostrada cuando faltan las variables de entorno de Supabase.

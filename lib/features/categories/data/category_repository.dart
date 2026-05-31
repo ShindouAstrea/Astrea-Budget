@@ -14,15 +14,17 @@ class CategoryRepository {
 
   String get _uid => _client.auth.currentUser!.id;
 
-  Future<List<Category>> fetchAll() async {
+  Future<List<Category>> fetchAll(String householdId) async {
     final rows = await _client
         .from('categories')
         .select()
+        .eq('household_id', householdId)
         .order('name', ascending: true);
     return rows.map(Category.fromJson).toList();
   }
 
   Future<Category> create({
+    required String householdId,
     required String name,
     required TransactionType type,
     required String icon,
@@ -31,6 +33,7 @@ class CategoryRepository {
     final row = await _client
         .from('categories')
         .insert({
+          'household_id': householdId,
           'user_id': _uid,
           'name': name,
           'type': type.wire,

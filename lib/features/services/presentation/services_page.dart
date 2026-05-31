@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
+import '../../households/presentation/household_controller.dart';
+import '../../households/presentation/household_switcher.dart';
 import '../domain/service.dart';
 import 'services_controller.dart';
 
@@ -26,13 +29,21 @@ class ServicesPage extends ConsumerWidget {
       }
     }
 
+    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Servicios')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.pushNamed(AppRoute.serviceForm.name),
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo'),
+      appBar: AppBar(
+        title: const Text('Servicios'),
+        actions: const [HouseholdIndicator()],
       ),
+      floatingActionButton: isOwner
+          ? FloatingActionButton.extended(
+              heroTag: 'fab-services',
+              onPressed: () => context.pushNamed(AppRoute.serviceForm.name),
+              icon: const Icon(Icons.add),
+              label: const Text('Nuevo'),
+            )
+          : null,
       body: servicesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorStateView(
@@ -42,7 +53,7 @@ class ServicesPage extends ConsumerWidget {
         data: (services) {
           if (services.isEmpty) {
             return EmptyStateView(
-              icon: Icons.receipt_long_outlined,
+              illustration: const BrandEmptyArt(EmptyArt.services),
               title: 'Sin servicios',
               message:
                   'Agrega tus servicios (arriendo, suscripciones, etc.) para '

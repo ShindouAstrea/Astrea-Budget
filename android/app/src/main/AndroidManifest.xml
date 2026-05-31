@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Requerido por local_auth para la autenticación biométrica. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <!-- Requerido para notificaciones locales (Android 13+). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
-        android:label="astrea_budget"
+        android:label="Astrea Budget"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -35,6 +35,23 @@ class Formatters {
     return raw[0].toUpperCase() + raw.substring(1);
   }
 
+  /// `Ene`, `Feb`, … (abreviado y capitalizado, sin punto).
+  static String monthShort(DateTime date) {
+    final raw = DateFormat('MMM', locale).format(date).replaceAll('.', '');
+    return raw[0].toUpperCase() + raw.substring(1);
+  }
+
+  /// `$1,2M`, `$350k`, `$900` — moneda compacta para ejes de gráficos.
+  static String compactCurrency(num amount) {
+    final a = amount.abs();
+    final sign = amount < 0 ? '-' : '';
+    if (a >= 1000000) {
+      return '$sign\$${(a / 1000000).toStringAsFixed(a >= 10000000 ? 0 : 1)}M';
+    }
+    if (a >= 1000) return '$sign\$${(a / 1000).round()}k';
+    return '$sign\$${a.round()}';
+  }
+
   /// `5` → `Vence el 5` (día del mes para servicios fijos).
   static String billingDay(int day) => 'Vence el $day';
 

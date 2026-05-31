@@ -5,11 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/month_selector.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../categories/domain/category.dart';
 import '../../categories/presentation/categories_controller.dart';
+import '../../households/presentation/household_controller.dart';
+import '../../households/presentation/household_switcher.dart';
 import '../domain/transaction.dart';
 import 'transactions_controller.dart';
 
@@ -26,6 +30,7 @@ class TransactionsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transacciones'),
+        actions: const [HouseholdIndicator()],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Padding(
@@ -47,7 +52,7 @@ class TransactionsPage extends ConsumerWidget {
               data: (items) {
                 if (items.isEmpty) {
                   return EmptyStateView(
-                    icon: Icons.receipt_long_outlined,
+                    illustration: const BrandEmptyArt(EmptyArt.transactions),
                     title: filters.isActive
                         ? 'Sin resultados'
                         : 'Sin movimientos este mes',
@@ -142,13 +147,23 @@ class _TransactionTile extends ConsumerWidget {
     final color = tx.isIncome ? finance.income : finance.expense;
     final catColor = category?.colorValue ?? AppColors.brand;
 
+    // En presupuestos compartidos, etiqueta quién registró el movimiento.
+    final shared = ref.watch(isSharedHouseholdProvider);
+    final author = shared
+        ? ref.watch(householdMemberNamesProvider)[tx.userId]
+        : null;
+
+    // Sólo el autor puede editar/eliminar (RLS Nivel A). En el personal todo es
+    // tuyo; en compartido, los movimientos ajenos son de sólo lectura.
+    final myId = ref.watch(currentUserProvider)?.id;
+    final isMine = tx.userId == myId;
+
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
-        onTap: () => context.pushNamed(
-          AppRoute.transactionForm.name,
-          extra: tx,
-        ),
+        onTap: isMine
+            ? () => context.pushNamed(AppRoute.transactionForm.name, extra: tx)
+            : null,
         leading: CircleAvatar(
           backgroundColor: catColor.withValues(alpha: 0.15),
           child: Icon(category?.iconData ?? Icons.category, color: catColor),
@@ -162,7 +177,8 @@ class _TransactionTile extends ConsumerWidget {
         ),
         subtitle: Text(
           '${category?.name ?? 'Sin categoría'} · '
-          '${Formatters.dayMonthYear(tx.date)}',
+          '${Formatters.dayMonthYear(tx.date)}'
+          '${author != null ? ' · $author' : ''}',
         ),
         trailing: Text(
           Formatters.signedCurrency(tx.amount, isIncome: tx.isIncome),

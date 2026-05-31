@@ -1,15 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/budget_cycle.dart';
 import '../../../shared/enums.dart';
 import '../../../shared/selected_month_provider.dart';
+import '../../accounts/presentation/accounts_controller.dart';
+import '../../households/presentation/household_controller.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction.dart';
 
-/// Transacciones del mes seleccionado. Se recalcula al cambiar de mes.
+/// Transacciones del mes financiero seleccionado (según el día de corte).
 final monthlyTransactionsProvider =
-    FutureProvider<List<TransactionModel>>((ref) {
+    FutureProvider<List<TransactionModel>>((ref) async {
+  final householdId = await ref.watch(activeHouseholdIdProvider.future);
   final month = ref.watch(selectedMonthProvider);
-  return ref.watch(transactionRepositoryProvider).fetchForMonth(month);
+  final cutoff = ref.watch(budgetCutoffProvider);
+  final range = BudgetCycle.bounds(month, cutoff);
+  return ref
+      .watch(transactionRepositoryProvider)
+      .fetchBetween(householdId, range.start, range.end);
 });
 
 /// Filtros activos del historial.
@@ -77,8 +85,14 @@ class TransactionActions {
     required DateTime date,
     String? description,
     String? categoryId,
+    String? accountId,
   }) async {
+    final householdId = await ref.read(activeHouseholdIdProvider.future);
+    final account =
+        accountId ?? (await ref.read(activeAccountProvider.future))?.id;
     await ref.read(transactionRepositoryProvider).create(
+          householdId: householdId,
+          accountId: account,
           type: type,
           amount: amount,
           date: date,
@@ -86,6 +100,7 @@ class TransactionActions {
           categoryId: categoryId,
         );
     ref.invalidate(monthlyTransactionsProvider);
+    ref.invalidate(accountBalancesProvider);
   }
 
   Future<void> update({
@@ -95,6 +110,7 @@ class TransactionActions {
     required DateTime date,
     String? description,
     String? categoryId,
+    String? accountId,
   }) async {
     await ref.read(transactionRepositoryProvider).update(
           id: id,
@@ -103,13 +119,16 @@ class TransactionActions {
           date: date,
           description: description,
           categoryId: categoryId,
+          accountId: accountId,
         );
     ref.invalidate(monthlyTransactionsProvider);
+    ref.invalidate(accountBalancesProvider);
   }
 
   Future<void> delete(String id) async {
     await ref.read(transactionRepositoryProvider).delete(id);
     ref.invalidate(monthlyTransactionsProvider);
+    ref.invalidate(accountBalancesProvider);
   }
 }
 

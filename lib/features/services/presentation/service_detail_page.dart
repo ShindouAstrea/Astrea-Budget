@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/validators.dart';
+import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/state_views.dart';
 import '../domain/service.dart';
 import '../domain/service_payment.dart';
@@ -32,6 +35,17 @@ class ServiceDetailPage extends ConsumerWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-service-payment',
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => _RegisterPaymentSheet(service: service),
+        ),
+        icon: const Icon(Icons.add),
+        label: const Text('Registrar pago'),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
@@ -57,7 +71,7 @@ class ServiceDetailPage extends ConsumerWidget {
             data: (payments) {
               if (payments.isEmpty) {
                 return const EmptyStateView(
-                  icon: Icons.history,
+                  illustration: BrandEmptyArt(EmptyArt.history),
                   title: 'Sin pagos registrados',
                   message: 'Los pagos del mes aparecerán aquí.',
                 );
@@ -159,6 +173,133 @@ class _PaymentRow extends ConsumerWidget {
                 },
                 child: const Text('Pagar'),
               ),
+      ),
+    );
+  }
+}
+
+/// Hoja inferior para registrar un pago/vencimiento de un servicio. Útil sobre
+/// todo para servicios esporádicos (los fijos generan su pago automáticamente).
+class _RegisterPaymentSheet extends ConsumerStatefulWidget {
+  const _RegisterPaymentSheet({required this.service});
+  final Service service;
+
+  @override
+  ConsumerState<_RegisterPaymentSheet> createState() =>
+      _RegisterPaymentSheetState();
+}
+
+class _RegisterPaymentSheetState extends ConsumerState<_RegisterPaymentSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _amount;
+  late DateTime _dueDate;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _amount = TextEditingController(
+      text: widget.service.estimatedAmount.toInt().toString(),
+    );
+    _dueDate = DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      locale: const Locale('es'),
+    );
+    if (picked != null) setState(() => _dueDate = picked);
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(paymentActionsProvider).createPayment(
+            serviceId: widget.service.id,
+            dueDate: _dueDate,
+            amount: Formatters.parseAmount(_amount.text)!,
+          );
+      if (mounted) {
+        context.showSuccess('Vencimiento registrado');
+        Navigator.pop(context);
+      }
+    } catch (_) {
+      if (mounted) context.showError('No se pudo registrar el pago');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 8,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Registrar pago',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _amount,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Monto',
+                prefixText: r'$ ',
+                prefixIcon: Icon(Icons.payments_outlined),
+              ),
+              validator: Validators.amount,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              tileColor: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.4),
+              leading: const Icon(Icons.event_outlined),
+              title: const Text('Fecha de vencimiento'),
+              subtitle: Text(Formatters.dayMonthYear(_dueDate)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _pickDate,
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                  : const Text('Guardar'),
+            ),
+          ],
+        ),
       ),
     );
   }

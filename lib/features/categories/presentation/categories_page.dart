@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
+import '../../households/presentation/household_controller.dart';
 import '../domain/category.dart';
 import 'categories_controller.dart';
 
@@ -14,14 +16,18 @@ class CategoriesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
+    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Categorías')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva'),
-      ),
+      floatingActionButton: isOwner
+          ? FloatingActionButton.extended(
+              heroTag: 'fab-categories',
+              onPressed: () => _openForm(context, ref),
+              icon: const Icon(Icons.add),
+              label: const Text('Nueva'),
+            )
+          : null,
       body: categoriesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorStateView(
@@ -31,7 +37,7 @@ class CategoriesPage extends ConsumerWidget {
         data: (categories) {
           if (categories.isEmpty) {
             return const EmptyStateView(
-              icon: Icons.category_outlined,
+              illustration: BrandEmptyArt(EmptyArt.categories),
               title: 'Sin categorías',
               message: 'Crea tu primera categoría con el botón +.',
             );

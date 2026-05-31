@@ -23,13 +23,17 @@ class ServiceRepository {
 
   // ----------------------------- services -----------------------------
 
-  Future<List<Service>> fetchServices() async {
-    final rows =
-        await _client.from('services').select().order('name', ascending: true);
+  Future<List<Service>> fetchServices(String householdId) async {
+    final rows = await _client
+        .from('services')
+        .select()
+        .eq('household_id', householdId)
+        .order('name', ascending: true);
     return rows.map(Service.fromJson).toList();
   }
 
   Future<Service> createService({
+    required String householdId,
     required String name,
     required ServiceType type,
     required ServiceCategory category,
@@ -40,6 +44,7 @@ class ServiceRepository {
     final row = await _client
         .from('services')
         .insert({
+          'household_id': householdId,
           'user_id': _uid,
           'name': name,
           'type': type.wire,
@@ -86,14 +91,34 @@ class ServiceRepository {
 
   // -------------------------- service_payments -------------------------
 
-  Future<List<ServicePayment>> fetchPaymentsForMonth(DateTime month) async {
-    final start = DateTime(month.year, month.month, 1);
-    final end = DateTime(month.year, month.month + 1, 1);
+  /// Pagos con vencimiento en el rango `[start, end)` (mes financiero).
+  Future<List<ServicePayment>> fetchPaymentsBetween(
+    String householdId,
+    DateTime start,
+    DateTime end,
+  ) async {
     final rows = await _client
         .from('service_payments')
         .select()
+        .eq('household_id', householdId)
         .gte('due_date', _date(start))
         .lt('due_date', _date(end))
+        .order('due_date', ascending: true);
+    return rows.map(ServicePayment.fromJson).toList();
+  }
+
+  /// Pagos pendientes con vencimiento desde [from] en adelante (para programar
+  /// los recordatorios de notificación).
+  Future<List<ServicePayment>> fetchPendingFrom(
+    String householdId,
+    DateTime from,
+  ) async {
+    final rows = await _client
+        .from('service_payments')
+        .select()
+        .eq('household_id', householdId)
+        .eq('status', PaymentStatus.pendiente.wire)
+        .gte('due_date', _date(from))
         .order('due_date', ascending: true);
     return rows.map(ServicePayment.fromJson).toList();
   }
@@ -110,8 +135,11 @@ class ServiceRepository {
   /// Genera (si no existe) la instancia de pago del mes para los servicios
   /// FIJOS activos con `billing_day`. Idempotente gracias al UNIQUE
   /// (service_id, due_date) + upsert que ignora duplicados.
-  Future<void> generateMonthlyPayments(DateTime month) async {
-    final services = await fetchServices();
+  Future<void> generateMonthlyPayments(
+    String householdId,
+    DateTime month,
+  ) async {
+    final services = await fetchServices(householdId);
     final fixed = services.where(
       (s) => s.active && s.isFixed && s.billingDay != null,
     );
@@ -123,6 +151,7 @@ class ServiceRepository {
       final day = s.billingDay!.clamp(1, lastDay);
       final due = DateTime(month.year, month.month, day);
       rows.add({
+        'household_id': householdId,
         'service_id': s.id,
         'user_id': _uid,
         'due_date': _date(due),
@@ -141,6 +170,7 @@ class ServiceRepository {
 
   /// Crea manualmente una instancia de pago (útil para servicios esporádicos).
   Future<ServicePayment> createPayment({
+    required String householdId,
     required String serviceId,
     required DateTime dueDate,
     required int amount,
@@ -148,6 +178,7 @@ class ServiceRepository {
     final row = await _client
         .from('service_payments')
         .insert({
+          'household_id': householdId,
           'service_id': serviceId,
           'user_id': _uid,
           'due_date': _date(dueDate),
@@ -162,17 +193,22 @@ class ServiceRepository {
   /// Marca un pago como pagado: crea la transacción de gasto correspondiente y
   /// enlaza ambos registros (`transaction_id` ↔ `service_id`).
   Future<void> markAsPaid({
+    required String householdId,
     required ServicePayment payment,
     required String? categoryId,
+    String? accountId,
     DateTime? paidDate,
   }) async {
     final date = paidDate ?? DateTime.now();
 
-    // 1. Crea la transacción de gasto enlazada al servicio.
+    // 1. Crea la transacción de gasto enlazada al servicio (a nombre de quien
+    //    paga: RLS de transactions exige user_id = auth.uid()).
     final tx = await _client
         .from('transactions')
         .insert({
+          'household_id': householdId,
           'user_id': _uid,
+          'account_id': accountId,
           'type': TransactionType.expense.wire,
           'amount': payment.amount,
           'date': _date(date),

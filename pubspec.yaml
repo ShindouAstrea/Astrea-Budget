@@ -1,7 +1,7 @@
 name: astrea_budget
 description: "Astrea Budget — control visual de ingresos y gastos mes a mes (CLP / es_CL)."
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: ^3.12.0
@@ -31,8 +31,8 @@ dependencies:
   fl_chart: ^0.69.2
 
   # Seguridad local
-  local_auth: ^2.3.0
-  flutter_secure_storage: ^9.2.2
+  local_auth: ^3.0.1
+  flutter_secure_storage: ^10.3.1
 
   # Formato y localización
   intl: ^0.20.2
@@ -43,6 +43,17 @@ dependencies:
   # Variables de entorno desde archivo .env (sin --dart-define)
   flutter_dotenv: ^5.2.1
 
+  # Preferencias locales (modo de tema y paleta elegida)
+  shared_preferences: ^2.3.3
+
+  # Notificaciones locales (recordatorios de pago de servicios fijos)
+  flutter_local_notifications: ^19.0.0
+  timezone: ^0.10.0
+
+  # Splash nativo: la API en runtime (preserve/remove) exige que sea
+  # dependencia normal, no de dev. La generación usa el mismo paquete.
+  flutter_native_splash: ^2.4.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -52,6 +63,11 @@ dev_dependencies:
   build_runner: ^2.4.13
   freezed: ^2.5.7
   json_serializable: ^6.9.0
+
+  # Branding: genera los launcher icons a todos los tamaños desde los PNG de
+  # assets/branding/ (creados por tool/gen_branding.py, arte propio).
+  # flutter_native_splash vive en dependencies (se usa también en runtime).
+  flutter_launcher_icons: ^0.14.1
   # NOTA: riverpod_generator 2.x arrastra analyzer_plugin 0.12.0, incompatible
   # con el analyzer 7.6 del SDK actual. Por eso los providers de Riverpod se
   # escriben a mano (idénticos en funcionalidad) y se mantiene codegen sólo
@@ -62,3 +78,42 @@ flutter:
   assets:
     # Archivo de variables de entorno cargado en runtime por flutter_dotenv.
     - .env
+
+# ───────────────────────── Icono de la app ─────────────────────────
+# Genera launcher icons (Android adaptive + iOS + web/macOS/Windows) desde
+# arte propio. Regenerar:  dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/branding/icon_full.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  adaptive_icon_background: "assets/branding/icon_background.png"
+  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/branding/icon_full.png"
+    background_color: "#2563EB"
+    theme_color: "#2563EB"
+  macos:
+    generate: true
+    image_path: "assets/branding/icon_full.png"
+  windows:
+    generate: true
+    image_path: "assets/branding/icon_full.png"
+
+# ──────────────────── Splash / pantalla de carga ───────────────────
+# Adaptativo a tema claro/oscuro. Regenerar:  dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#F4F7FF"
+  color_dark: "#0B1220"
+  image: "assets/branding/splash_logo_light.png"
+  image_dark: "assets/branding/splash_logo_dark.png"
+  android_12:
+    image: "assets/branding/splash_logo_light.png"
+    image_dark: "assets/branding/splash_logo_dark.png"
+    color: "#F4F7FF"
+    color_dark: "#0B1220"
+  android: true
+  ios: true
+  web: false

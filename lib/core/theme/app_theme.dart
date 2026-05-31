@@ -10,13 +10,15 @@ import 'app_colors.dart';
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData light() => _build(Brightness.light);
-  static ThemeData dark() => _build(Brightness.dark);
+  static ThemeData light({Color seed = AppColors.brand}) =>
+      _build(Brightness.light, seed);
+  static ThemeData dark({Color seed = AppColors.brand}) =>
+      _build(Brightness.dark, seed);
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData _build(Brightness brightness, Color seed) {
     final isDark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.brand,
+      seedColor: seed,
       brightness: brightness,
     );
 
@@ -67,7 +69,11 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          // Altura cómoda (≥48 para touch) con ancho mínimo finito. Antes era
+          // Size.fromHeight(52) = ancho mínimo infinito, lo que rompía los
+          // FilledButton usados como `trailing` de un ListTile. Los botones de
+          // formulario siguen full-width porque están en columnas con stretch.
+          minimumSize: const Size(64, 52),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

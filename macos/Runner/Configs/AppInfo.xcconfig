@@ -8,7 +8,7 @@
 PRODUCT_NAME = astrea_budget
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.astreaBudget
+PRODUCT_BUNDLE_IDENTIFIER = com.astrea.astreaBudget
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Astrea. All rights reserved.

@@ -9,6 +9,9 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
+import '../../accounts/presentation/accounts_controller.dart';
+import '../../auth/data/auth_repository.dart';
+import '../../budgets/presentation/budgets_controller.dart';
 import '../../categories/presentation/categories_controller.dart';
 import '../domain/transaction.dart';
 import 'transactions_controller.dart';
@@ -32,6 +35,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   late TransactionType _type;
   late DateTime _date;
   String? _categoryId;
+  String? _accountId;
   bool _saving = false;
 
   bool get _isEditing => widget.existing != null;
@@ -43,6 +47,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     _type = e?.type ?? TransactionType.expense;
     _date = e?.date ?? DateTime.now();
     _categoryId = e?.categoryId;
+    _accountId = e?.accountId;
     _amount = TextEditingController(
       text: e != null ? e.amount.toInt().toString() : '',
     );
@@ -67,9 +72,62 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  /// Si este gasto supera el tope de su categoría, devuelve cuánto se pasa y el
+  /// nombre de la categoría; si no hay tope o no se pasa, `null`.
+  ({double over, String name})? _budgetOverInfo(int amount) {
+    if (_type != TransactionType.expense || _categoryId == null) return null;
+    final statuses = ref.read(budgetStatusesProvider).valueOrNull ?? const [];
+    BudgetStatus? status;
+    for (final s in statuses) {
+      if (s.category.id == _categoryId) {
+        status = s;
+        break;
+      }
+    }
+    if (status == null || !status.hasBudget) return null;
+    // Al editar un gasto ya contado en el mes, descontamos su aporte previo.
+    final prior = (_isEditing &&
+            widget.existing!.categoryId == _categoryId &&
+            !widget.existing!.isIncome)
+        ? widget.existing!.amount
+        : 0.0;
+    final projected = (status.spent - prior) + amount;
+    if (projected <= status.limit) return null;
+    return (over: projected - status.limit, name: status.category.name);
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final amount = Formatters.parseAmount(_amount.text)!;
+
+    // Aviso si el gasto supera el tope de su categoría.
+    final overInfo = _budgetOverInfo(amount);
+    if (overInfo != null) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: Icon(Icons.warning_amber_rounded,
+              color: Theme.of(ctx).colorScheme.error),
+          title: const Text('Te pasas del tope'),
+          content: Text(
+            'Con esta transacción superas el tope de ${overInfo.name} por '
+            '${Formatters.currency(overInfo.over)}. ¿Registrarla igual?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Registrar igual'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
     setState(() => _saving = true);
     final actions = ref.read(transactionActionsProvider);
     try {
@@ -81,6 +139,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           date: _date,
           description: _description.text.trim(),
           categoryId: _categoryId,
+          accountId: _accountId,
         );
       } else {
         await actions.create(
@@ -89,6 +148,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           date: _date,
           description: _description.text.trim(),
           categoryId: _categoryId,
+          accountId: _accountId,
         );
       }
       if (mounted) {
@@ -131,6 +191,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesByTypeProvider(_type));
+    final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
+    final activeAccountId = ref.watch(activeAccountProvider).valueOrNull?.id;
     final finance = context.finance;
 
     // Si la categoría seleccionada ya no pertenece al tipo, la limpiamos.
@@ -138,11 +200,26 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _categoryId = null;
     }
 
+    // Cuenta efectiva mostrada: la elegida, si no la activa, si no la primera.
+    final selectedAccountId = _accountId ??
+        activeAccountId ??
+        (accounts.isNotEmpty ? accounts.first.id : null);
+
+    // Sólo el autor puede eliminar (RLS Nivel A). Refuerzo defensivo: el listado
+    // ya impide abrir el form de un movimiento ajeno.
+    final myId = ref.watch(currentUserProvider)?.id;
+    final isMine = !_isEditing || widget.existing!.userId == myId;
+
+    // Aviso en vivo si el gasto actual supera el tope de su categoría.
+    ref.watch(budgetStatusesProvider); // se redibuja cuando cargan los topes
+    final parsedAmount = Formatters.parseAmount(_amount.text) ?? 0;
+    final overInfo = parsedAmount > 0 ? _budgetOverInfo(parsedAmount) : null;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Editar transacción' : 'Nueva transacción'),
         actions: [
-          if (_isEditing)
+          if (_isEditing && isMine)
             IconButton(
               onPressed: _delete,
               icon: const Icon(Icons.delete_outline),
@@ -183,6 +260,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 prefixText: r'$ ',
               ),
               validator: Validators.amount,
+              // Recalcula el aviso de tope en vivo mientras se escribe.
+              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String?>(
@@ -207,6 +286,58 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               ],
               onChanged: (v) => setState(() => _categoryId = v),
             ),
+            if (accounts.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: selectedAccountId,
+                decoration: const InputDecoration(
+                  labelText: 'Cuenta',
+                  prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                ),
+                items: [
+                  for (final a in accounts)
+                    DropdownMenuItem(
+                      value: a.id,
+                      child: Row(
+                        children: [
+                          Icon(a.iconData, size: 18, color: a.colorValue),
+                          const SizedBox(width: 8),
+                          Text(a.name),
+                        ],
+                      ),
+                    ),
+                ],
+                onChanged: (v) => setState(() => _accountId = v),
+              ),
+            ],
+            if (overInfo != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Te pasas del tope de ${overInfo.name} por '
+                        '${Formatters.currency(overInfo.over)}.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             ListTile(
               shape: RoundedRectangleBorder(
