@@ -1,6 +1,148 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+
+/// Logo vectorial de la app: estrella fugaz con aureola de monedas ($) y
+/// estela que se desvanece. Réplica en CustomPaint del arte del icono
+/// (tool/gen_branding.py) para usarlo dentro de la UI sin assets raster.
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({super.key, this.size = 96});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(
+          painter: _BrandLogoPainter(Theme.of(context).colorScheme),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandLogoPainter extends CustomPainter {
+  _BrandLogoPainter(this.scheme);
+
+  final ColorScheme scheme;
+
+  // Paleta del branding (sincronizada con tool/gen_branding.py).
+  static const _accent = Color(0xFFF97316); // estela
+  static const _accentHi = Color(0xFFFBBF7A); // brillo interior de la estela
+  static const _gold = Color(0xFFFCD34D); // monedas/aureola en oscuro
+  static const _amber = Color(0xFFF59E0B); // monedas/aureola en claro
+  static const _softBlue = Color(0xFF5E93F2); // estrella en claro
+  static const _brandDeep = Color(0xFF1D4ED8); // detalle de moneda en oscuro
+
+  static const _scale = 0.85;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide;
+    canvas.translate((size.width - s) / 2, (size.height - s) / 2);
+
+    // Mismas variantes que el splash: contraste sobre fondo claro u oscuro.
+    final dark = scheme.brightness == Brightness.dark;
+    final starColor = dark ? Colors.white : _softBlue;
+    final orbitColor = dark ? _gold : _amber;
+    final coinDetail = dark ? _brandDeep : Colors.white;
+
+    final c = s / 2;
+    const ang = -math.pi / 4; // la estrella vuela hacia arriba a la derecha
+    final u = Offset(math.cos(ang), math.sin(ang));
+    final rs = s * 0.20 * _scale;
+    final head = Offset(c, c) + u * (s * 0.10 * _scale);
+    final tailLen = s * 0.44 * _scale;
+
+    // Estela desvanecida (nace detrás de la estrella).
+    final origin = head - u * (rs * 0.55);
+    _tail(canvas, origin, u, tailLen, rs * 0.48, _accent);
+    _tail(canvas, origin, u, tailLen * 0.80, rs * 0.21, _accentHi);
+
+    // Aureola de monedas, inclinada, detrás de la estrella.
+    canvas.save();
+    canvas.translate(head.dx, head.dy);
+    canvas.rotate(18 * math.pi / 180);
+    final rx = rs * 1.78, ry = rs * 0.84;
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: rx * 2, height: ry * 2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.5, rs * 0.085)
+        ..color = orbitColor,
+    );
+    for (final deg in const [18.0, 142.0, 262.0]) {
+      final a = deg * math.pi / 180;
+      _coin(canvas, Offset(rx * math.cos(a), ry * math.sin(a)), rs * 0.34,
+          orbitColor, coinDetail);
+    }
+    canvas.restore();
+
+    // Estrella de 5 puntas, al frente.
+    final star = Path();
+    for (var i = 0; i < 10; i++) {
+      final r = i.isEven ? rs : rs * 0.42;
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final pt = head + Offset(r * math.cos(a), r * math.sin(a));
+      i == 0 ? star.moveTo(pt.dx, pt.dy) : star.lineTo(pt.dx, pt.dy);
+    }
+    star.close();
+    canvas.drawPath(star, Paint()..color = starColor);
+  }
+
+  /// Estela cónica que se desvanece a transparente a lo largo de su longitud.
+  void _tail(Canvas c, Offset o, Offset u, double len, double wb, Color color) {
+    final tip = o - u * len;
+    final perp = Offset(-u.dy, u.dx);
+    final paint = Paint()
+      ..shader = ui.Gradient.linear(
+        o,
+        tip,
+        [color, color.withValues(alpha: 0.38), color.withValues(alpha: 0)],
+        const [0, 0.5, 1],
+      );
+    final path = Path()
+      ..moveTo(o.dx + perp.dx * wb, o.dy + perp.dy * wb)
+      ..lineTo(tip.dx, tip.dy)
+      ..lineTo(o.dx - perp.dx * wb, o.dy - perp.dy * wb)
+      ..close();
+    c.drawPath(path, paint);
+    c.drawCircle(o, wb, paint); // cabeza redondeada de la estela
+  }
+
+  /// Moneda legible: disco + canto interno + signo $.
+  void _coin(Canvas c, Offset o, double r, Color fill, Color detail) {
+    c.drawCircle(o, r, Paint()..color = fill);
+    c.drawCircle(
+      o,
+      r * 0.82,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1, r * 0.10)
+        ..color = detail,
+    );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: r'$',
+        style: TextStyle(
+          fontSize: r * 1.45,
+          fontWeight: FontWeight.w700,
+          color: detail,
+          height: 1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(c, o - Offset(tp.width / 2, tp.height / 2 + r * 0.06));
+  }
+
+  @override
+  bool shouldRepaint(covariant _BrandLogoPainter old) => old.scheme != scheme;
+}
 
 /// Ilustraciones de marca para estados vacíos, dibujadas por código.
 ///

@@ -16,10 +16,21 @@ class AuthController extends AsyncNotifier<void> {
             password: password,
           ));
 
-  Future<bool> signUp(String email, String password) =>
+  Future<bool> signUp(String email, String password, String name) =>
       _run(() => ref.read(authRepositoryProvider).signUp(
             email: email,
             password: password,
+            name: name,
+          ));
+
+  Future<bool> signInAsGuest() =>
+      _run(() => ref.read(authRepositoryProvider).signInAnonymously());
+
+  Future<bool> linkAccount(String email, String password, String name) =>
+      _run(() => ref.read(authRepositoryProvider).linkAccount(
+            email: email,
+            password: password,
+            name: name,
           ));
 
   Future<bool> sendPasswordReset(String email) =>
@@ -27,6 +38,10 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<bool> signOut() =>
       _run(() => ref.read(authRepositoryProvider).signOut());
+
+  /// Cierra la sesión de un invitado eliminando su cuenta y todos sus datos.
+  Future<bool> deleteGuestAccount() =>
+      _run(() => ref.read(authRepositoryProvider).deleteGuestAccount());
 
   /// Ejecuta una acción async actualizando el estado y traduciendo errores.
   Future<bool> _run(Future<void> Function() action) async {
@@ -52,8 +67,14 @@ class AuthController extends AsyncNotifier<void> {
   String _friendlyMessage(AuthException e) {
     final msg = e.message.toLowerCase();
     if (msg.contains('invalid login')) return 'Correo o contraseña incorrectos';
-    if (msg.contains('already registered') || msg.contains('already exists')) {
+    if (msg.contains('already registered') ||
+        msg.contains('already exists') ||
+        msg.contains('already in use')) {
       return 'Ya existe una cuenta con este correo';
+    }
+    if (msg.contains('anonymous sign-ins are disabled')) {
+      return 'El modo invitado no está habilitado. '
+          'Activa "Anonymous sign-ins" en el dashboard de Supabase.';
     }
     if (msg.contains('email not confirmed')) {
       return 'Debes confirmar tu correo antes de iniciar sesión';

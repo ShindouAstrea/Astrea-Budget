@@ -24,6 +24,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final isGuest = ref.watch(isGuestProvider);
     final profile = ref.watch(currentProfileProvider);
     final security = ref.watch(securityControllerProvider);
 
@@ -41,12 +42,50 @@ class SettingsPage extends ConsumerWidget {
             child: ListTile(
               leading: const CircleAvatar(child: Icon(Icons.person_outline)),
               title: Text(name),
-              subtitle: Text(user?.email ?? 'Sesión iniciada'),
+              subtitle: Text(
+                user?.email ?? (isGuest ? 'Modo invitado' : 'Sesión iniciada'),
+              ),
               trailing: const Icon(Icons.edit_outlined),
               onTap: () => _editName(context, ref, name),
             ),
           ),
           const SizedBox(height: 16),
+
+          // -------- Invitado: invitación a crear cuenta --------
+          if (isGuest) ...[
+            Card(
+              color: Theme.of(context)
+                  .colorScheme
+                  .secondaryContainer
+                  .withValues(alpha: 0.5),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Estás en modo invitado',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Tus datos se guardan en la nube, pero sólo en este '
+                      'dispositivo puedes acceder a ellos. Crea tu cuenta '
+                      'para protegerlos y entrar desde cualquier lugar.',
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () =>
+                          context.pushNamed(AppRoute.register.name),
+                      icon: const Icon(Icons.person_add_outlined),
+                      label: const Text('Crear mi cuenta'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // -------- Presupuesto --------
           _SectionTitle('Presupuesto'),
@@ -235,7 +274,42 @@ class SettingsPage extends ConsumerWidget {
           // -------- Cerrar sesión --------
           OutlinedButton.icon(
             onPressed: () async {
-              final ok = await ref.read(authControllerProvider.notifier).signOut();
+              // Un invitado no puede volver a entrar a su sesión anónima:
+              // cerrar sesión implica perder el acceso a sus datos.
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(isGuest
+                      ? '¿Salir del modo invitado?'
+                      : '¿Cerrar sesión?'),
+                  content: Text(isGuest
+                      ? 'Si cierras sesión sin crear una cuenta, se '
+                          'eliminarán permanentemente todos los datos que '
+                          'registraste como invitado.'
+                      : '¿Seguro que quieres cerrar tu sesión?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(ctx).colorScheme.error,
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Cerrar sesión'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm != true) return;
+              if (!context.mounted) return;
+              final auth = ref.read(authControllerProvider.notifier);
+              // El invitado no puede volver a su sesión anónima: además de
+              // cerrar sesión se elimina su cuenta y datos en el servidor.
+              final ok = isGuest
+                  ? await auth.deleteGuestAccount()
+                  : await auth.signOut();
               if (!ok && context.mounted) {
                 context.showError('No se pudo cerrar sesión');
               }

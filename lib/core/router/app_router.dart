@@ -61,7 +61,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       // Lee la sesión en vivo desde Supabase (evita valores obsoletos).
-      final loggedIn = Supabase.instance.client.auth.currentUser != null;
+      final user = Supabase.instance.client.auth.currentUser;
+      final loggedIn = user != null;
+      final isGuest = user?.isAnonymous ?? false;
       final locked = ref.read(appLockProvider);
       final loc = state.matchedLocation;
 
@@ -76,7 +78,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // 2. Con sesión pero bloqueada: forzar pantalla de bloqueo.
       if (locked) return onLockPage ? null : AppRoute.lock.path;
 
-      // 3. Autenticado y desbloqueado: salir de auth/lock hacia el inicio.
+      // 3. Invitado: puede entrar a registro para convertir su cuenta.
+      if (isGuest && loc == AppRoute.register.path) return null;
+
+      // 4. Autenticado y desbloqueado: salir de auth/lock hacia el inicio.
       if (onAuthPage || onLockPage) return AppRoute.dashboard.path;
 
       return null;

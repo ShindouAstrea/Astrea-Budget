@@ -34,6 +34,7 @@ drop table if exists public.households        cascade;
 drop table if exists public.profiles          cascade;
 
 drop function if exists public.handle_new_user()                cascade;
+drop function if exists public.handle_guest_converted()         cascade;
 drop function if exists public.is_household_member(uuid)        cascade;
 drop function if exists public.is_household_owner(uuid)         cascade;
 drop function if exists public.shares_household_with(uuid)      cascade;
@@ -41,6 +42,7 @@ drop function if exists public.enforce_shared_household_limit() cascade;
 drop function if exists public.create_household(text)           cascade;
 drop function if exists public.accept_invitation(uuid)          cascade;
 drop function if exists public.create_transfer(uuid, uuid, uuid, numeric, date, text) cascade;
+drop function if exists public.delete_own_guest_account()       cascade;
 
 drop type if exists transaction_type  cascade;
 drop type if exists service_type      cascade;
@@ -397,6 +399,8 @@ end; $$;
 -- =====================================================================
 -- 13. Onboarding: al registrarse, crear perfil + household personal +
 --     membresía owner + cuenta por defecto + categorías por defecto.
+--     Los usuarios anónimos (modo invitado) no tienen email: caen al
+--     nombre 'Invitado'.
 -- =====================================================================
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -404,7 +408,8 @@ declare
   hid uuid;
   v_name text := coalesce(
     nullif(new.raw_user_meta_data ->> 'name', ''),
-    split_part(new.email, '@', 1)
+    nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
+    'Invitado'
   );
 begin
   insert into public.profiles (id, display_name) values (new.id, v_name);
@@ -423,6 +428,34 @@ end; $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- =====================================================================
+-- 13b. Conversión de invitado: asociar correo al usuario anónimo
+--     (updateUser) es un UPDATE en auth.users, así que handle_new_user
+--     no corre y el perfil quedaría como 'Invitado'. Cuando el correo se
+--     materializa (inmediato si la confirmación está desactivada, o al
+--     confirmar el enlace), se reemplaza por el nombre elegido o el
+--     prefijo del correo. No toca perfiles renombrados manualmente.
+-- =====================================================================
+create or replace function public.handle_guest_converted()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  update public.profiles
+     set display_name = coalesce(
+           nullif(new.raw_user_meta_data ->> 'name', ''),
+           nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
+           display_name
+         )
+   where id = new.id
+     and display_name = 'Invitado';
+  return new;
+end; $$;
+
+create trigger on_auth_user_converted
+  after update of email on auth.users
+  for each row
+  when (old.email is distinct from new.email and coalesce(new.email, '') <> '')
+  execute function public.handle_guest_converted();
 
 -- =====================================================================
 -- 14. RPC: crear household compartido (controla el límite de 3 + owner)
@@ -530,6 +563,37 @@ returns table (
 $$;
 
 -- =====================================================================
+-- 16c. RPC: eliminar la cuenta de invitado junto con todos sus datos
+-- ---------------------------------------------------------------------
+-- La sesión anónima de un invitado no es recuperable: si solo cerrara
+-- sesión, su usuario y datos quedarían huérfanos para siempre. Este RPC
+-- borra el usuario de auth.users y los FK `on delete cascade` arrastran
+-- perfil, households, cuentas, transacciones, etc.
+-- =====================================================================
+create or replace function public.delete_own_guest_account()
+returns void language plpgsql security definer set search_path = public as $$
+declare v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'No autenticado';
+  end if;
+  if not exists (select 1 from auth.users where id = v_uid and is_anonymous) then
+    raise exception 'Solo una cuenta de invitado puede auto-eliminarse';
+  end if;
+  -- Si el invitado creó un presupuesto compartido donde participan otras
+  -- personas, el cascade destruiría datos ajenos: mejor impedirlo.
+  if exists (
+    select 1
+    from public.households h
+    join public.household_members m on m.household_id = h.id
+    where h.created_by = v_uid and h.is_personal = false and m.user_id <> v_uid
+  ) then
+    raise exception 'Tienes un presupuesto compartido con otros miembros';
+  end if;
+  delete from auth.users where id = v_uid;
+end; $$;
+
+-- =====================================================================
 -- 17. Bootstrap de usuarios ya existentes
 -- ---------------------------------------------------------------------
 -- El trigger on_auth_user_created sólo corre en el REGISTRO. Las cuentas
@@ -545,7 +609,13 @@ begin
     if exists (select 1 from public.households where created_by = u.id and is_personal) then
       continue;
     end if;
-    v_name := coalesce(nullif(u.raw_user_meta_data ->> 'name', ''), split_part(u.email, '@', 1));
+    -- Mismo fallback que handle_new_user: los usuarios anónimos (invitados)
+    -- no tienen email y sin 'Invitado' el insert violaría el not null.
+    v_name := coalesce(
+      nullif(u.raw_user_meta_data ->> 'name', ''),
+      nullif(split_part(coalesce(u.email, ''), '@', 1), ''),
+      'Invitado'
+    );
 
     insert into public.profiles (id, display_name) values (u.id, v_name)
       on conflict (id) do nothing;

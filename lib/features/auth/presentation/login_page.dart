@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/state_views.dart';
 import 'auth_controller.dart';
 
@@ -38,6 +39,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _enterAsGuest() async {
+    final ok =
+        await ref.read(authControllerProvider.notifier).signInAsGuest();
+    if (!ok && mounted) {
+      final error = ref.read(authControllerProvider).error;
+      context.showError(error?.toString() ?? 'No se pudo entrar como invitado');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authControllerProvider).isLoading;
@@ -56,8 +66,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 24),
-                    Icon(Icons.account_balance_wallet_rounded,
-                        size: 56, color: scheme.primary),
+                    const BrandLogo(size: 104),
                     const SizedBox(height: 16),
                     Text(
                       'Astrea Budget',
@@ -138,6 +147,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           child: const Text('Regístrate'),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'o',
+                            style: TextStyle(color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: isLoading ? null : _enterAsGuest,
+                      icon: const Icon(Icons.person_outline),
+                      label: const Text('Continuar como invitado'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Podrás crear tu cuenta más tarde sin perder tus datos.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                     ),
                   ],
                 ),

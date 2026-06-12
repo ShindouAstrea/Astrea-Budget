@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/router/routes.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../profile/presentation/profile_controller.dart';
+import '../data/auth_repository.dart';
 import 'auth_controller.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -16,6 +19,7 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
@@ -23,6 +27,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   void dispose() {
+    _name.dispose();
     _email.dispose();
     _password.dispose();
     _confirm.dispose();
@@ -31,17 +36,44 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final ok = await ref
-        .read(authControllerProvider.notifier)
-        .signUp(_email.text, _password.text);
+    final controller = ref.read(authControllerProvider.notifier);
+    final isGuest = ref.read(isGuestProvider);
+    final name = _name.text.trim();
+
+    // Invitado: en vez de crear un usuario nuevo, se le asocia correo y
+    // contraseña al usuario anónimo actual (conserva todos sus datos).
+    final ok = isGuest
+        ? await controller.linkAccount(_email.text, _password.text, name)
+        : await controller.signUp(_email.text, _password.text, name);
     if (!mounted) return;
     if (ok) {
-      // Si Supabase devolvió sesión (confirmación de correo desactivada), el
-      // guard del router redirige solo al dashboard. Si no hay sesión, hay que
-      // confirmar el correo / iniciar sesión: avisamos y volvemos al login.
-      if (Supabase.instance.client.auth.currentSession != null) {
+      if (isGuest) {
+        // El perfil se creó con el nombre 'Invitado' (la sesión anónima no
+        // tenía correo): se reemplaza por el nombre elegido. Si falla, el
+        // trigger on_auth_user_converted lo corrige en el servidor.
+        try {
+          await ref.read(profileActionsProvider).updateDisplayName(name);
+        } catch (_) {}
+        if (!mounted) return;
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user?.emailConfirmedAt != null) {
+          // Confirmación de correo desactivada en Supabase: la conversión
+          // fue inmediata, no hay nada que esperar.
+          context.showSuccess('¡Cuenta creada! Tus datos se conservan.');
+          context.go(AppRoute.dashboard.path);
+        } else {
+          context.showSuccess(
+            'Revisa tu correo para confirmar y completar el registro. '
+            'Tus datos se conservan.',
+          );
+          context.pop();
+        }
+      } else if (Supabase.instance.client.auth.currentSession != null) {
+        // Si Supabase devolvió sesión (confirmación de correo desactivada), el
+        // guard del router redirige solo al dashboard.
         context.showSuccess('¡Bienvenido a Astrea Budget!');
       } else {
+        // Sin sesión: hay que confirmar el correo / iniciar sesión.
         context.showSuccess(
           'Cuenta creada. Revisa tu correo para confirmarla e inicia sesión.',
         );
@@ -56,6 +88,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authControllerProvider).isLoading;
+    final isGuest = ref.watch(isGuestProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Crear cuenta')),
@@ -70,6 +103,35 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (isGuest) ...[
+                      Card(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondaryContainer
+                            .withValues(alpha: 0.5),
+                        child: const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                            'Estás usando la app como invitado. Al crear tu '
+                            'cuenta conservarás todos los datos que ya '
+                            'registraste.',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    TextFormField(
+                      controller: _name,
+                      textCapitalization: TextCapitalization.words,
+                      autofillHints: const [AutofillHints.name],
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre o apodo',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (v) =>
+                          Validators.required(v, field: 'El nombre'),
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,

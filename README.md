@@ -58,7 +58,10 @@ supabase/
    inserta las categorías por defecto al registrarse.
 3. (Opcional) En **Authentication → Providers → Email**, desactiva *"Confirm email"*
    si quieres probar el login sin verificar el correo.
-4. Copia tu **Project URL** y **anon public key** (Settings → API).
+4. Para el modo invitado, en **Authentication → Sign In / Up** activa
+   *"Allow anonymous sign-ins"*. El invitado usa la app con un usuario anónimo
+   y, al registrarse desde Ajustes, su cuenta (y todos sus datos) se conserva.
+5. Copia tu **Project URL** y **anon public key** (Settings → API).
 
 ### Datos de ejemplo (seed)
 
