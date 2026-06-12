@@ -37,7 +37,13 @@ mixin _$TransactionModel {
   @JsonKey(name: 'service_id')
   String? get serviceId => throw _privateConstructorUsedError;
   @JsonKey(name: 'transfer_group_id')
-  String? get transferGroupId => throw _privateConstructorUsedError;
+  String? get transferGroupId => throw _privateConstructorUsedError; // Compras en cuotas: N filas (una por mes) con el mismo grupo.
+  @JsonKey(name: 'installment_group_id')
+  String? get installmentGroupId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'installments_total')
+  int? get installmentsTotal => throw _privateConstructorUsedError;
+  @JsonKey(name: 'installment_number')
+  int? get installmentNumber => throw _privateConstructorUsedError;
 
   /// Serializes this TransactionModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -68,6 +74,9 @@ abstract class $TransactionModelCopyWith<$Res> {
     @JsonKey(name: 'category_id') String? categoryId,
     @JsonKey(name: 'service_id') String? serviceId,
     @JsonKey(name: 'transfer_group_id') String? transferGroupId,
+    @JsonKey(name: 'installment_group_id') String? installmentGroupId,
+    @JsonKey(name: 'installments_total') int? installmentsTotal,
+    @JsonKey(name: 'installment_number') int? installmentNumber,
   });
 }
 
@@ -97,6 +106,9 @@ class _$TransactionModelCopyWithImpl<$Res, $Val extends TransactionModel>
     Object? categoryId = freezed,
     Object? serviceId = freezed,
     Object? transferGroupId = freezed,
+    Object? installmentGroupId = freezed,
+    Object? installmentsTotal = freezed,
+    Object? installmentNumber = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -144,6 +156,18 @@ class _$TransactionModelCopyWithImpl<$Res, $Val extends TransactionModel>
                 ? _value.transferGroupId
                 : transferGroupId // ignore: cast_nullable_to_non_nullable
                       as String?,
+            installmentGroupId: freezed == installmentGroupId
+                ? _value.installmentGroupId
+                : installmentGroupId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            installmentsTotal: freezed == installmentsTotal
+                ? _value.installmentsTotal
+                : installmentsTotal // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            installmentNumber: freezed == installmentNumber
+                ? _value.installmentNumber
+                : installmentNumber // ignore: cast_nullable_to_non_nullable
+                      as int?,
           )
           as $Val,
     );
@@ -171,6 +195,9 @@ abstract class _$$TransactionModelImplCopyWith<$Res>
     @JsonKey(name: 'category_id') String? categoryId,
     @JsonKey(name: 'service_id') String? serviceId,
     @JsonKey(name: 'transfer_group_id') String? transferGroupId,
+    @JsonKey(name: 'installment_group_id') String? installmentGroupId,
+    @JsonKey(name: 'installments_total') int? installmentsTotal,
+    @JsonKey(name: 'installment_number') int? installmentNumber,
   });
 }
 
@@ -199,6 +226,9 @@ class __$$TransactionModelImplCopyWithImpl<$Res>
     Object? categoryId = freezed,
     Object? serviceId = freezed,
     Object? transferGroupId = freezed,
+    Object? installmentGroupId = freezed,
+    Object? installmentsTotal = freezed,
+    Object? installmentNumber = freezed,
   }) {
     return _then(
       _$TransactionModelImpl(
@@ -246,6 +276,18 @@ class __$$TransactionModelImplCopyWithImpl<$Res>
             ? _value.transferGroupId
             : transferGroupId // ignore: cast_nullable_to_non_nullable
                   as String?,
+        installmentGroupId: freezed == installmentGroupId
+            ? _value.installmentGroupId
+            : installmentGroupId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        installmentsTotal: freezed == installmentsTotal
+            ? _value.installmentsTotal
+            : installmentsTotal // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        installmentNumber: freezed == installmentNumber
+            ? _value.installmentNumber
+            : installmentNumber // ignore: cast_nullable_to_non_nullable
+                  as int?,
       ),
     );
   }
@@ -266,6 +308,9 @@ class _$TransactionModelImpl extends _TransactionModel {
     @JsonKey(name: 'category_id') this.categoryId,
     @JsonKey(name: 'service_id') this.serviceId,
     @JsonKey(name: 'transfer_group_id') this.transferGroupId,
+    @JsonKey(name: 'installment_group_id') this.installmentGroupId,
+    @JsonKey(name: 'installments_total') this.installmentsTotal,
+    @JsonKey(name: 'installment_number') this.installmentNumber,
   }) : super._();
 
   factory _$TransactionModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -299,10 +344,20 @@ class _$TransactionModelImpl extends _TransactionModel {
   @override
   @JsonKey(name: 'transfer_group_id')
   final String? transferGroupId;
+  // Compras en cuotas: N filas (una por mes) con el mismo grupo.
+  @override
+  @JsonKey(name: 'installment_group_id')
+  final String? installmentGroupId;
+  @override
+  @JsonKey(name: 'installments_total')
+  final int? installmentsTotal;
+  @override
+  @JsonKey(name: 'installment_number')
+  final int? installmentNumber;
 
   @override
   String toString() {
-    return 'TransactionModel(id: $id, userId: $userId, householdId: $householdId, accountId: $accountId, type: $type, amount: $amount, date: $date, description: $description, categoryId: $categoryId, serviceId: $serviceId, transferGroupId: $transferGroupId)';
+    return 'TransactionModel(id: $id, userId: $userId, householdId: $householdId, accountId: $accountId, type: $type, amount: $amount, date: $date, description: $description, categoryId: $categoryId, serviceId: $serviceId, transferGroupId: $transferGroupId, installmentGroupId: $installmentGroupId, installmentsTotal: $installmentsTotal, installmentNumber: $installmentNumber)';
   }
 
   @override
@@ -326,7 +381,13 @@ class _$TransactionModelImpl extends _TransactionModel {
             (identical(other.serviceId, serviceId) ||
                 other.serviceId == serviceId) &&
             (identical(other.transferGroupId, transferGroupId) ||
-                other.transferGroupId == transferGroupId));
+                other.transferGroupId == transferGroupId) &&
+            (identical(other.installmentGroupId, installmentGroupId) ||
+                other.installmentGroupId == installmentGroupId) &&
+            (identical(other.installmentsTotal, installmentsTotal) ||
+                other.installmentsTotal == installmentsTotal) &&
+            (identical(other.installmentNumber, installmentNumber) ||
+                other.installmentNumber == installmentNumber));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -344,6 +405,9 @@ class _$TransactionModelImpl extends _TransactionModel {
     categoryId,
     serviceId,
     transferGroupId,
+    installmentGroupId,
+    installmentsTotal,
+    installmentNumber,
   );
 
   /// Create a copy of TransactionModel
@@ -376,6 +440,9 @@ abstract class _TransactionModel extends TransactionModel {
     @JsonKey(name: 'category_id') final String? categoryId,
     @JsonKey(name: 'service_id') final String? serviceId,
     @JsonKey(name: 'transfer_group_id') final String? transferGroupId,
+    @JsonKey(name: 'installment_group_id') final String? installmentGroupId,
+    @JsonKey(name: 'installments_total') final int? installmentsTotal,
+    @JsonKey(name: 'installment_number') final int? installmentNumber,
   }) = _$TransactionModelImpl;
   const _TransactionModel._() : super._();
 
@@ -409,7 +476,16 @@ abstract class _TransactionModel extends TransactionModel {
   String? get serviceId;
   @override
   @JsonKey(name: 'transfer_group_id')
-  String? get transferGroupId;
+  String? get transferGroupId; // Compras en cuotas: N filas (una por mes) con el mismo grupo.
+  @override
+  @JsonKey(name: 'installment_group_id')
+  String? get installmentGroupId;
+  @override
+  @JsonKey(name: 'installments_total')
+  int? get installmentsTotal;
+  @override
+  @JsonKey(name: 'installment_number')
+  int? get installmentNumber;
 
   /// Create a copy of TransactionModel
   /// with the given fields replaced by the non-null parameter values.

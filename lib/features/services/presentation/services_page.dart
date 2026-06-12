@@ -9,6 +9,8 @@ import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
 import '../../households/presentation/household_controller.dart';
 import '../../households/presentation/household_switcher.dart';
+import '../../onboarding/presentation/feature_tour.dart';
+import '../../onboarding/presentation/feature_tours.dart';
 import '../domain/service.dart';
 import 'services_controller.dart';
 
@@ -34,7 +36,10 @@ class ServicesPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Servicios'),
-        actions: const [HouseholdIndicator()],
+        actions: const [
+          FeatureTourButton(tour: servicesTour),
+          HouseholdIndicator(),
+        ],
       ),
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(

@@ -20,6 +20,9 @@ _$TransactionModelImpl _$$TransactionModelImplFromJson(
   categoryId: json['category_id'] as String?,
   serviceId: json['service_id'] as String?,
   transferGroupId: json['transfer_group_id'] as String?,
+  installmentGroupId: json['installment_group_id'] as String?,
+  installmentsTotal: (json['installments_total'] as num?)?.toInt(),
+  installmentNumber: (json['installment_number'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$$TransactionModelImplToJson(
@@ -36,6 +39,9 @@ Map<String, dynamic> _$$TransactionModelImplToJson(
   'category_id': instance.categoryId,
   'service_id': instance.serviceId,
   'transfer_group_id': instance.transferGroupId,
+  'installment_group_id': instance.installmentGroupId,
+  'installments_total': instance.installmentsTotal,
+  'installment_number': instance.installmentNumber,
 };
 
 const _$TransactionTypeEnumMap = {

@@ -22,6 +22,10 @@ class TransactionModel with _$TransactionModel {
     @JsonKey(name: 'category_id') String? categoryId,
     @JsonKey(name: 'service_id') String? serviceId,
     @JsonKey(name: 'transfer_group_id') String? transferGroupId,
+    // Compras en cuotas: N filas (una por mes) con el mismo grupo.
+    @JsonKey(name: 'installment_group_id') String? installmentGroupId,
+    @JsonKey(name: 'installments_total') int? installmentsTotal,
+    @JsonKey(name: 'installment_number') int? installmentNumber,
   }) = _TransactionModel;
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) =>
@@ -29,4 +33,9 @@ class TransactionModel with _$TransactionModel {
 
   bool get isIncome => type.isIncome;
   bool get isTransfer => transferGroupId != null;
+  bool get isInstallment => installmentGroupId != null;
+
+  /// `Cuota 2/12` o null si no es una compra en cuotas.
+  String? get installmentLabel =>
+      isInstallment ? 'Cuota $installmentNumber/$installmentsTotal' : null;
 }

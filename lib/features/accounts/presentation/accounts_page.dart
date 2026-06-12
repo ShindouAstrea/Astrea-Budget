@@ -8,6 +8,8 @@ import '../../../core/utils/validators.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
 import '../../households/presentation/household_controller.dart';
+import '../../onboarding/presentation/feature_tour.dart';
+import '../../onboarding/presentation/feature_tours.dart';
 import '../domain/account.dart';
 import 'accounts_controller.dart';
 
@@ -25,6 +27,7 @@ class AccountsPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Cuentas'),
         actions: [
+          const FeatureTourButton(tour: accountsTour),
           if (accounts.length >= 2)
             IconButton(
               onPressed: () => _openTransfer(context, ref, accounts),

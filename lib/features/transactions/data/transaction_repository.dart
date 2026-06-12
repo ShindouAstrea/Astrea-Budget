@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/supabase_provider.dart';
+import '../../../core/utils/uuid.dart';
 import '../../../shared/enums.dart';
+import '../domain/installments.dart';
 import '../domain/transaction.dart';
 
 /// Acceso a la tabla `transactions`. RLS limita las filas al usuario actual.
@@ -93,6 +95,45 @@ class TransactionRepository {
 
   Future<void> delete(String id) async {
     await _client.from('transactions').delete().eq('id', id);
+  }
+
+  /// Crea una compra en cuotas: [count] gastos (uno por mes desde [firstDate])
+  /// que suman exactamente [totalAmount], unidos por un grupo común.
+  Future<void> createInstallments({
+    required String householdId,
+    String? accountId,
+    required int totalAmount,
+    required int count,
+    required DateTime firstDate,
+    String? description,
+    String? categoryId,
+  }) async {
+    final groupId = uuidV4();
+    final amounts = splitInstallments(totalAmount, count);
+    await _client.from('transactions').insert([
+      for (var i = 0; i < count; i++)
+        {
+          'household_id': householdId,
+          'user_id': _uid,
+          'account_id': accountId,
+          'type': TransactionType.expense.wire,
+          'amount': amounts[i],
+          'date': _date(installmentDate(firstDate, i)),
+          'description': description,
+          'category_id': categoryId,
+          'installment_group_id': groupId,
+          'installments_total': count,
+          'installment_number': i + 1,
+        },
+    ]);
+  }
+
+  /// Elimina todas las cuotas de un grupo (la compra completa).
+  Future<void> deleteInstallmentGroup(String groupId) async {
+    await _client
+        .from('transactions')
+        .delete()
+        .eq('installment_group_id', groupId);
   }
 }
 

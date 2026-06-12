@@ -3,22 +3,34 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/config/prefs_provider.dart';
 import '../../../core/config/supabase_provider.dart';
+import '../../../core/data/local_cache.dart';
 import '../../../shared/enums.dart';
 import '../../households/presentation/household_controller.dart';
 import '../../transactions/presentation/transactions_controller.dart';
 import '../data/account_repository.dart';
 import '../domain/account.dart';
 
-/// Cuentas del household activo (no archivadas).
+/// Cuentas del household activo (no archivadas). Con caché offline.
 final accountsProvider = FutureProvider<List<Account>>((ref) async {
   final householdId = await ref.watch(activeHouseholdIdProvider.future);
-  return ref.watch(accountRepositoryProvider).fetchByHousehold(householdId);
+  final repo = ref.watch(accountRepositoryProvider);
+  return ref.watch(localCacheProvider).fetchList(
+        key: 'accounts:$householdId',
+        fetch: () => repo.fetchByHousehold(householdId),
+        toJson: (a) => a.toJson(),
+        fromJson: Account.fromJson,
+      );
 });
 
 /// Saldos calculados por cuenta del household activo: `{accountId: balance}`.
+/// Con caché offline.
 final accountBalancesProvider = FutureProvider<Map<String, double>>((ref) async {
   final householdId = await ref.watch(activeHouseholdIdProvider.future);
-  return ref.watch(accountRepositoryProvider).fetchBalances(householdId);
+  final repo = ref.watch(accountRepositoryProvider);
+  return ref.watch(localCacheProvider).fetchDoubleMap(
+        key: 'balances:$householdId',
+        fetch: () => repo.fetchBalances(householdId),
+      );
 });
 
 /// Cuenta seleccionada por defecto para nuevos movimientos, persistida por

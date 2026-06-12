@@ -14,11 +14,45 @@ import '../../categories/domain/category.dart';
 import '../../categories/presentation/categories_controller.dart';
 import '../../households/presentation/household_controller.dart';
 import '../../households/presentation/household_switcher.dart';
+import '../../accounts/presentation/accounts_controller.dart';
+import '../../onboarding/presentation/feature_tour.dart';
+import '../../onboarding/presentation/feature_tours.dart';
+import '../../../shared/selected_month_provider.dart';
+import '../data/transaction_csv.dart';
 import '../domain/transaction.dart';
 import 'transactions_controller.dart';
 
 class TransactionsPage extends ConsumerWidget {
   const TransactionsPage({super.key});
+
+  /// Exporta las transacciones visibles (con los filtros aplicados) a CSV y
+  /// abre la hoja de compartir.
+  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
+    final items =
+        ref.read(filteredTransactionsProvider).valueOrNull ?? const [];
+    if (items.isEmpty) {
+      context.showError('No hay transacciones para exportar');
+      return;
+    }
+    final categories = ref.read(categoriesProvider).valueOrNull ?? const [];
+    final accounts = ref.read(accountsProvider).valueOrNull ?? const [];
+    final month = ref.read(selectedMonthProvider);
+    final csv = buildTransactionsCsv(
+      items,
+      categoryNames: {for (final c in categories) c.id: c.name},
+      accountNames: {for (final a in accounts) a.id: a.name},
+      authorNames: ref.read(householdMemberNamesProvider),
+    );
+    final label = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+    try {
+      await shareTransactionsCsv(
+        csv: csv,
+        fileName: 'astrea_transacciones_$label.csv',
+      );
+    } catch (_) {
+      if (context.mounted) context.showError('No se pudo exportar el archivo');
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,7 +64,15 @@ class TransactionsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transacciones'),
-        actions: const [HouseholdIndicator()],
+        actions: [
+          IconButton(
+            onPressed: () => _exportCsv(context, ref),
+            icon: const Icon(Icons.ios_share),
+            tooltip: 'Exportar CSV',
+          ),
+          const FeatureTourButton(tour: transactionsTour),
+          const HouseholdIndicator(),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Padding(
@@ -41,6 +83,7 @@ class TransactionsPage extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          const _SearchField(),
           _FilterBar(filters: filters),
           Expanded(
             child: filtered.when(
@@ -83,9 +126,91 @@ class TransactionsPage extends ConsumerWidget {
   }
 }
 
+/// Campo de búsqueda por texto (descripción, categoría o monto).
+class _SearchField extends ConsumerStatefulWidget {
+  const _SearchField();
+
+  @override
+  ConsumerState<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends ConsumerState<_SearchField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: ref.read(transactionFiltersProvider).query,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Si los filtros se limpian desde fuera (chip "Limpiar"), vacía el campo.
+    ref.listen(transactionFiltersProvider, (_, next) {
+      if (next.query.isEmpty && _controller.text.isNotEmpty) {
+        _controller.clear();
+      }
+    });
+
+    final query = ref.watch(
+      transactionFiltersProvider.select((f) => f.query),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: TextField(
+        controller: _controller,
+        onChanged: ref.read(transactionFiltersProvider.notifier).setQuery,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Buscar por descripción, categoría o monto',
+          prefixIcon: const Icon(Icons.search),
+          isDense: true,
+          suffixIcon: query.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _controller.clear();
+                    ref
+                        .read(transactionFiltersProvider.notifier)
+                        .setQuery('');
+                  },
+                ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FilterBar extends ConsumerWidget {
   const _FilterBar({required this.filters});
   final TransactionFilters filters;
+
+  Future<void> _pickDateRange(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(transactionFiltersProvider.notifier);
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      locale: const Locale('es'),
+      initialDateRange: filters.hasDateRange
+          ? DateTimeRange(
+              start: filters.from ?? filters.to!,
+              end: filters.to ?? filters.from!,
+            )
+          : null,
+    );
+    if (picked != null) notifier.setDateRange(picked.start, picked.end);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -109,6 +234,20 @@ class _FilterBar extends ConsumerWidget {
             selected: filters.type == TransactionType.expense,
             onSelected: (sel) =>
                 notifier.setType(sel ? TransactionType.expense : null),
+          ),
+          const SizedBox(width: 8),
+          FilterChip(
+            avatar: filters.hasDateRange
+                ? null
+                : const Icon(Icons.date_range, size: 18),
+            label: Text(
+              filters.hasDateRange
+                  ? '${Formatters.dayMonthYear(filters.from!)} – '
+                      '${Formatters.dayMonthYear(filters.to!)}'
+                  : 'Fechas',
+            ),
+            selected: filters.hasDateRange,
+            onSelected: (_) => _pickDateRange(context, ref),
           ),
           const SizedBox(width: 8),
           DropdownMenu<String?>(
@@ -178,6 +317,7 @@ class _TransactionTile extends ConsumerWidget {
         subtitle: Text(
           '${category?.name ?? 'Sin categoría'} · '
           '${Formatters.dayMonthYear(tx.date)}'
+          '${tx.isInstallment ? ' · ${tx.installmentLabel}' : ''}'
           '${author != null ? ' · $author' : ''}',
         ),
         trailing: Text(

@@ -7,6 +7,8 @@ import '../../../core/widgets/month_selector.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../households/presentation/household_controller.dart';
 import '../../households/presentation/household_switcher.dart';
+import '../../onboarding/presentation/feature_tour.dart';
+import '../../onboarding/presentation/feature_tours.dart';
 import 'budgets_controller.dart';
 
 class BudgetsPage extends ConsumerWidget {
@@ -21,7 +23,10 @@ class BudgetsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Presupuestos'),
-        actions: const [HouseholdIndicator()],
+        actions: const [
+          FeatureTourButton(tour: budgetsTour),
+          HouseholdIndicator(),
+        ],
       ),
       body: Column(
         children: [

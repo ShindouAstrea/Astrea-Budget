@@ -3,14 +3,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/config/prefs_provider.dart';
 import '../../../core/config/supabase_provider.dart';
+import '../../../core/data/local_cache.dart';
 import '../data/household_repository.dart';
 import '../domain/household.dart';
 import '../domain/household_invitation.dart';
 import '../domain/household_member.dart';
 
 /// Households a los que pertenece el usuario (personal + compartidos).
+/// Con caché offline: es la raíz de la que dependen los providers de datos.
 final householdsProvider = FutureProvider<List<Household>>((ref) {
-  return ref.watch(householdRepositoryProvider).fetchMine();
+  final uid = ref.watch(supabaseClientProvider).auth.currentUser?.id;
+  final repo = ref.watch(householdRepositoryProvider);
+  if (uid == null) return repo.fetchMine();
+  return ref.watch(localCacheProvider).fetchList(
+        key: 'households:$uid',
+        fetch: repo.fetchMine,
+        toJson: (h) => h.toJson(),
+        fromJson: Household.fromJson,
+      );
 });
 
 /// Id del household activo, persistido en SharedPreferences **por usuario**

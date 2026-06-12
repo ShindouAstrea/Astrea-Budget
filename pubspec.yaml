@@ -1,7 +1,7 @@
 name: astrea_budget
 description: "Astrea Budget — control visual de ingresos y gastos mes a mes (CLP / es_CL)."
 publish_to: 'none'
-version: 2.1.0+2
+version: 2.5.0+4
 
 environment:
   sdk: ^3.12.0
@@ -49,6 +49,9 @@ dependencies:
   # Notificaciones locales (recordatorios de pago de servicios fijos)
   flutter_local_notifications: ^19.0.0
   timezone: ^0.10.0
+
+  # Compartir archivos (export CSV de transacciones)
+  share_plus: ^10.1.4
 
   # Splash nativo: la API en runtime (preserve/remove) exige que sea
   # dependencia normal, no de dev. La generación usa el mismo paquete.

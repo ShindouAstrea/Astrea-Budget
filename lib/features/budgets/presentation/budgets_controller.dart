@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/data/local_cache.dart';
 import '../../../shared/enums.dart';
 import '../../categories/domain/category.dart';
 import '../../categories/presentation/categories_controller.dart';
@@ -8,10 +9,16 @@ import '../../households/presentation/household_controller.dart';
 import '../data/budget_repository.dart';
 import '../domain/budget.dart';
 
-/// Topes de presupuesto del household activo.
+/// Topes de presupuesto del household activo. Con caché offline.
 final budgetsProvider = FutureProvider<List<Budget>>((ref) async {
   final householdId = await ref.watch(activeHouseholdIdProvider.future);
-  return ref.watch(budgetRepositoryProvider).fetchByHousehold(householdId);
+  final repo = ref.watch(budgetRepositoryProvider);
+  return ref.watch(localCacheProvider).fetchList(
+        key: 'budgets:$householdId',
+        fetch: () => repo.fetchByHousehold(householdId),
+        toJson: (b) => b.toJson(),
+        fromJson: Budget.fromJson,
+      );
 });
 
 /// Estado de una categoría frente a su tope en el mes seleccionado.

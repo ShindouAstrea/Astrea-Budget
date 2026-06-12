@@ -23,7 +23,8 @@ enum AppRoute {
   budgets('/budgets', 'budgets'),
   trends('/trends', 'trends'),
   recurringIncomes('/recurring-incomes', 'recurring-incomes'),
-  savings('/savings', 'savings');
+  savings('/savings', 'savings'),
+  onboarding('/onboarding', 'onboarding');
 
   const AppRoute(this.path, this.name);
   final String path;

@@ -13,8 +13,12 @@ import '../../accounts/presentation/accounts_controller.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/presentation/budgets_controller.dart';
 import '../../categories/presentation/categories_controller.dart';
+import '../domain/installments.dart';
 import '../domain/transaction.dart';
 import 'transactions_controller.dart';
+
+/// Qué eliminar cuando la transacción pertenece a una compra en cuotas.
+enum _DeleteChoice { single, group }
 
 /// Formulario de creación/edición de transacción. Si [existing] no es null,
 /// edita; si es null, crea.
@@ -38,6 +42,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   String? _accountId;
   bool _saving = false;
 
+  /// Nº de cuotas (1 = sin cuotas). Sólo para gastos nuevos en cuenta de crédito.
+  int _installments = 1;
+  static const _installmentOptions = [1, 2, 3, 6, 12, 18, 24, 36];
+
   bool get _isEditing => widget.existing != null;
 
   @override
@@ -59,6 +67,26 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     _amount.dispose();
     _description.dispose();
     super.dispose();
+  }
+
+  /// Cuenta efectiva para el movimiento (la elegida, si no la activa, si no la
+  /// primera). Refleja la misma resolución que muestra el dropdown.
+  String? get _selectedAccountId {
+    final accounts = ref.read(accountsProvider).valueOrNull ?? const [];
+    return _accountId ??
+        ref.read(activeAccountProvider).valueOrNull?.id ??
+        (accounts.isNotEmpty ? accounts.first.id : null);
+  }
+
+  /// Las cuotas aplican sólo al crear un gasto pagado con tarjeta de crédito.
+  bool get _installmentsApply {
+    if (_isEditing || _type != TransactionType.expense) return false;
+    final accounts = ref.read(accountsProvider).valueOrNull ?? const [];
+    final selectedId = _selectedAccountId;
+    for (final a in accounts) {
+      if (a.id == selectedId) return a.type.isCredit;
+    }
+    return false;
   }
 
   Future<void> _pickDate() async {
@@ -100,8 +128,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (!_formKey.currentState!.validate()) return;
     final amount = Formatters.parseAmount(_amount.text)!;
 
-    // Aviso si el gasto supera el tope de su categoría.
-    final overInfo = _budgetOverInfo(amount);
+    // Aviso si el gasto supera el tope de su categoría. En cuotas, lo que
+    // impacta este mes es la primera cuota, no el total.
+    final monthlyImpact = _installmentsApply && _installments > 1
+        ? splitInstallments(amount, _installments).first
+        : amount;
+    final overInfo = _budgetOverInfo(monthlyImpact);
     if (overInfo != null) {
       final proceed = await showDialog<bool>(
         context: context,
@@ -141,6 +173,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           categoryId: _categoryId,
           accountId: _accountId,
         );
+      } else if (_installmentsApply && _installments > 1) {
+        await actions.createInstallments(
+          totalAmount: amount,
+          count: _installments,
+          firstDate: _date,
+          description: _description.text.trim(),
+          categoryId: _categoryId,
+          accountId: _accountId,
+        );
       } else {
         await actions.create(
           type: _type,
@@ -152,7 +193,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         );
       }
       if (mounted) {
-        context.showSuccess(_isEditing ? 'Transacción actualizada' : 'Transacción creada');
+        context.showSuccess(
+          _isEditing
+              ? 'Transacción actualizada'
+              : (_installmentsApply && _installments > 1
+                  ? 'Compra en $_installments cuotas creada'
+                  : 'Transacción creada'),
+        );
         context.pop();
       }
     } catch (_) {
@@ -163,6 +210,52 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   }
 
   Future<void> _delete() async {
+    final existing = widget.existing!;
+
+    // En una compra en cuotas se puede borrar sólo esta cuota o el grupo.
+    if (existing.isInstallment) {
+      final choice = await showDialog<_DeleteChoice>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Eliminar compra en cuotas'),
+          content: Text(
+            'Esta es la ${existing.installmentLabel} de una compra en '
+            '${existing.installmentsTotal} cuotas. ¿Qué quieres eliminar?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, _DeleteChoice.single),
+              child: const Text('Sólo esta cuota'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, _DeleteChoice.group),
+              child: const Text('Todas las cuotas'),
+            ),
+          ],
+        ),
+      );
+      if (choice == null) return;
+      final actions = ref.read(transactionActionsProvider);
+      if (choice == _DeleteChoice.group) {
+        await actions.deleteInstallmentGroup(existing.installmentGroupId!);
+      } else {
+        await actions.delete(existing.id);
+      }
+      if (mounted) {
+        context.showSuccess(
+          choice == _DeleteChoice.group
+              ? 'Compra en cuotas eliminada'
+              : 'Cuota eliminada',
+        );
+        context.pop();
+      }
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -213,7 +306,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     // Aviso en vivo si el gasto actual supera el tope de su categoría.
     ref.watch(budgetStatusesProvider); // se redibuja cuando cargan los topes
     final parsedAmount = Formatters.parseAmount(_amount.text) ?? 0;
-    final overInfo = parsedAmount > 0 ? _budgetOverInfo(parsedAmount) : null;
+    // Con cuotas, lo que impacta el mes es la primera cuota, no el total.
+    final monthlyImpact = _installmentsApply && _installments > 1
+        ? splitInstallments(parsedAmount, _installments).first
+        : parsedAmount;
+    final overInfo = monthlyImpact > 0 ? _budgetOverInfo(monthlyImpact) : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -308,6 +405,45 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     ),
                 ],
                 onChanged: (v) => setState(() => _accountId = v),
+              ),
+            ],
+            if (_installmentsApply) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                initialValue: _installments,
+                decoration: const InputDecoration(
+                  labelText: 'Cuotas',
+                  prefixIcon: Icon(Icons.payments_outlined),
+                ),
+                items: [
+                  for (final n in _installmentOptions)
+                    DropdownMenuItem(
+                      value: n,
+                      child: Text(n == 1 ? 'Sin cuotas' : '$n cuotas'),
+                    ),
+                ],
+                onChanged: (v) => setState(() => _installments = v ?? 1),
+              ),
+              if (_installments > 1 && parsedAmount > 0) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '$_installments cuotas mensuales de '
+                  '${Formatters.currency(splitInstallments(parsedAmount, _installments).first)} '
+                  'desde ${Formatters.dayMonthYear(_date)}.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ],
+            if (widget.existing?.isInstallment == true) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Esta transacción es la ${widget.existing!.installmentLabel} '
+                'de una compra en cuotas.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
             if (overInfo != null) ...[

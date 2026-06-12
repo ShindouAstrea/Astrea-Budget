@@ -13,6 +13,7 @@ import '../../features/budgets/presentation/budgets_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/households/presentation/sharing_page.dart';
+import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/recurring/presentation/recurring_incomes_page.dart';
 import '../../features/savings/presentation/savings_page.dart';
 import '../../features/security/presentation/lock_page.dart';
@@ -40,6 +41,7 @@ class _RouterRefresh extends ChangeNotifier {
       (_) => notifyListeners(),
     );
     ref.listen(appLockProvider, (_, _) => notifyListeners());
+    ref.listen(onboardingSeenProvider, (_, _) => notifyListeners());
   }
 
   late final StreamSubscription<AuthState> _authSub;
@@ -78,10 +80,17 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // 2. Con sesión pero bloqueada: forzar pantalla de bloqueo.
       if (locked) return onLockPage ? null : AppRoute.lock.path;
 
-      // 3. Invitado: puede entrar a registro para convertir su cuenta.
+      // 3. Primera vez en el dispositivo: mostrar el tutorial de bienvenida.
+      if (!ref.read(onboardingSeenProvider)) {
+        return loc == AppRoute.onboarding.path
+            ? null
+            : AppRoute.onboarding.path;
+      }
+
+      // 4. Invitado: puede entrar a registro para convertir su cuenta.
       if (isGuest && loc == AppRoute.register.path) return null;
 
-      // 4. Autenticado y desbloqueado: salir de auth/lock hacia el inicio.
+      // 5. Autenticado y desbloqueado: salir de auth/lock hacia el inicio.
       if (onAuthPage || onLockPage) return AppRoute.dashboard.path;
 
       return null;
@@ -161,6 +170,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.savings.path,
         name: AppRoute.savings.name,
         builder: (_, _) => const SavingsPage(),
+      ),
+      GoRoute(
+        path: AppRoute.onboarding.path,
+        name: AppRoute.onboarding.name,
+        builder: (_, _) => const OnboardingPage(),
       ),
 
       // Shell con barra inferior (4 pestañas con estado preservado).

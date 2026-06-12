@@ -171,12 +171,18 @@ create table public.transactions (
   -- Transferencias (#8): par de filas (expense origen + income destino) con el
   -- mismo grupo. Se excluyen del resumen de ingresos/gastos del dashboard.
   transfer_group_id uuid,
+  -- Compras en cuotas: N filas (una por mes) con el mismo grupo. La fila i
+  -- lleva installment_number = i (1..N) e installments_total = N.
+  installment_group_id uuid,
+  installments_total   int check (installments_total between 2 and 60),
+  installment_number   int check (installment_number >= 1),
   created_at        timestamptz not null default now()
 );
 create index transactions_household_date_idx on public.transactions (household_id, date desc);
 create index transactions_account_idx        on public.transactions (account_id);
 create index transactions_category_idx       on public.transactions (category_id);
 create index transactions_transfer_idx       on public.transactions (transfer_group_id);
+create index transactions_installment_idx    on public.transactions (installment_group_id);
 
 -- ---------------------------------------------------------------------
 -- 8. Pagos de servicios (lo que vence cada mes)

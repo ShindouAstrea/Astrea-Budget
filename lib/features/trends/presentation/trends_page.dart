@@ -5,6 +5,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../households/presentation/household_switcher.dart';
+import '../../onboarding/presentation/feature_tour.dart';
+import '../../onboarding/presentation/feature_tours.dart';
 import 'trends_bar_chart.dart';
 import 'trends_controller.dart';
 
@@ -18,7 +20,10 @@ class TrendsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tendencias'),
-        actions: const [HouseholdIndicator()],
+        actions: const [
+          FeatureTourButton(tour: trendsTour),
+          HouseholdIndicator(),
+        ],
       ),
       body: trendsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

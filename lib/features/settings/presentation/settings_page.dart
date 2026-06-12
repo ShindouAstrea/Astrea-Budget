@@ -14,6 +14,7 @@ import '../../auth/data/auth_repository.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../households/presentation/household_controller.dart';
 import '../../households/presentation/household_switcher.dart';
+import '../../budgets/data/budget_alert_service.dart';
 import '../../notifications/presentation/notifications_controller.dart';
 import '../../profile/presentation/profile_controller.dart';
 import '../../security/presentation/security_controller.dart';
@@ -132,6 +133,19 @@ class SettingsPage extends ConsumerWidget {
                       },
                     ),
                     if (notif.enabled) ...[
+                      const Divider(height: 0),
+                      SwitchListTile(
+                        secondary: const Icon(Icons.donut_small_outlined),
+                        title: const Text('Alertas de presupuesto'),
+                        subtitle: const Text(
+                          'Avisa cuando una categoría llega al 80% o supera '
+                          'su tope mensual.',
+                        ),
+                        value: ref.watch(budgetAlertsEnabledProvider),
+                        onChanged: (v) => ref
+                            .read(budgetAlertsEnabledProvider.notifier)
+                            .set(v),
+                      ),
                       const Divider(height: 0),
                       ListTile(
                         leading: const Icon(Icons.schedule_outlined),
@@ -267,6 +281,19 @@ class SettingsPage extends ConsumerWidget {
                   trailing: const Text('CLP'),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // -------- Ayuda --------
+          _SectionTitle('Ayuda'),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.school_outlined),
+              title: const Text('Ver tutorial'),
+              subtitle: const Text('Repasa las funcionalidades de la app'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.pushNamed(AppRoute.onboarding.name),
             ),
           ),
           const SizedBox(height: 24),

@@ -19,6 +19,11 @@ class NotificationService {
   static const _channelDesc =
       'Avisos de servicios fijos próximos a vencer.';
 
+  static const _budgetChannelId = 'budget_alerts';
+  static const _budgetChannelName = 'Alertas de presupuesto';
+  static const _budgetChannelDesc =
+      'Avisos cuando una categoría se acerca o supera su tope mensual.';
+
   /// Inicializa el plugin y la base de zonas horarias. Idempotente.
   Future<void> init() async {
     if (_initialized) return;
@@ -70,6 +75,35 @@ class NotificationService {
           presentSound: true,
         ),
       );
+
+  static const _budgetDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      _budgetChannelId,
+      _budgetChannelName,
+      channelDescription: _budgetChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+    iOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentBanner: true,
+      presentSound: true,
+    ),
+  );
+
+  /// Muestra una notificación inmediata en el canal de alertas de presupuesto.
+  Future<void> showBudgetAlert({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    await init();
+    try {
+      await _plugin.show(id, title, body, _budgetDetails);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Notif] no se pudo mostrar: $e');
+    }
+  }
 
   /// Envía una notificación de prueba ~5 segundos en el futuro. Útil para
   /// verificar el pipeline (permiso + canal + despliegue) sin esperar.

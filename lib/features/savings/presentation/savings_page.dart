@@ -11,6 +11,8 @@ import '../../auth/data/auth_repository.dart';
 import '../../categories/domain/category.dart' show kCategoryIcons;
 import '../../households/presentation/household_controller.dart';
 import '../../households/presentation/household_switcher.dart';
+import '../../onboarding/presentation/feature_tour.dart';
+import '../../onboarding/presentation/feature_tours.dart';
 import '../domain/savings_goal.dart';
 import 'savings_controller.dart';
 
@@ -24,7 +26,10 @@ class SavingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Metas de ahorro'),
-        actions: const [HouseholdIndicator()],
+        actions: const [
+          FeatureTourButton(tour: savingsTour),
+          HouseholdIndicator(),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab-savings',
