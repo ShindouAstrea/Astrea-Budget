@@ -61,6 +61,6 @@ final categoriesProvider =
 /// Categorías filtradas por tipo (para el formulario de transacción).
 final categoriesByTypeProvider =
     Provider.family<List<Category>, TransactionType>((ref, type) {
-  final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
+  final categories = ref.watch(categoriesProvider).value ?? [];
   return categories.where((c) => c.type == type).toList();
 });

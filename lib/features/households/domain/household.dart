@@ -5,7 +5,7 @@ part 'household.g.dart';
 
 /// Presupuesto compartido (o personal) al que pertenecen los datos del usuario.
 @freezed
-class Household with _$Household {
+abstract class Household with _$Household {
   const factory Household({
     required String id,
     required String name,

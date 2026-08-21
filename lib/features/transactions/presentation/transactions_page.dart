@@ -29,13 +29,13 @@ class TransactionsPage extends ConsumerWidget {
   /// abre la hoja de compartir.
   Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
     final items =
-        ref.read(filteredTransactionsProvider).valueOrNull ?? const [];
+        ref.read(filteredTransactionsProvider).value ?? const [];
     if (items.isEmpty) {
       context.showError('No hay transacciones para exportar');
       return;
     }
-    final categories = ref.read(categoriesProvider).valueOrNull ?? const [];
-    final accounts = ref.read(accountsProvider).valueOrNull ?? const [];
+    final categories = ref.read(categoriesProvider).value ?? const [];
+    final accounts = ref.read(accountsProvider).value ?? const [];
     final month = ref.read(selectedMonthProvider);
     final csv = buildTransactionsCsv(
       items,
@@ -58,7 +58,7 @@ class TransactionsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filtered = ref.watch(filteredTransactionsProvider);
     final filters = ref.watch(transactionFiltersProvider);
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
+    final categories = ref.watch(categoriesProvider).value ?? [];
     final byId = {for (final c in categories) c.id: c};
 
     return Scaffold(
@@ -215,7 +215,7 @@ class _FilterBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(transactionFiltersProvider.notifier);
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
+    final categories = ref.watch(categoriesProvider).value ?? [];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

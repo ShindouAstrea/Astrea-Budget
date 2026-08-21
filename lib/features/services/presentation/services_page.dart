@@ -20,7 +20,7 @@ class ServicesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final servicesAsync = ref.watch(servicesProvider);
-    final payments = ref.watch(monthlyPaymentsProvider).valueOrNull ?? [];
+    final payments = ref.watch(monthlyPaymentsProvider).value ?? [];
     // Estado del mes por servicio.
     final statusByService = <String, PaymentStatus>{};
     for (final p in payments) {
@@ -31,7 +31,7 @@ class ServicesPage extends ConsumerWidget {
       }
     }
 
-    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
+    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).value ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -124,6 +124,23 @@ class _ServiceTile extends StatelessWidget {
   final Service service;
   final PaymentStatus? status;
 
+  /// `Suscripción · Anual · Vence el 5 · $9.900`. La frecuencia se muestra
+  /// siempre que no sea mensual: es lo que explica por qué un servicio no
+  /// aparece todos los meses.
+  String _subtitle() {
+    final parts = <String>[service.category.label];
+    if (service.isFixed && !service.frequency.isMonthly) {
+      parts.add(service.frequency.label);
+    }
+    if (service.isFixed && service.billingDay != null) {
+      parts.add(Formatters.billingDay(service.billingDay!));
+    } else if (!service.isFixed) {
+      parts.add('Esporádico');
+    }
+    parts.add(Formatters.currency(service.estimatedAmount));
+    return parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -144,11 +161,7 @@ class _ServiceTile extends StatelessWidget {
           ),
         ),
         title: Text(service.name),
-        subtitle: Text(
-          '${service.category.label} · '
-          '${service.isFixed && service.billingDay != null ? Formatters.billingDay(service.billingDay!) : service.frequency.label} · '
-          '${Formatters.currency(service.estimatedAmount)}',
-        ),
+        subtitle: Text(_subtitle()),
         trailing: _StatusBadge(status: status, active: service.active),
       ),
     );

@@ -9,7 +9,7 @@ part 'savings_goal.g.dart';
 
 /// Meta de ahorro: objetivo, monto ahorrado y (opcional) fecha límite.
 @freezed
-class SavingsGoal with _$SavingsGoal {
+abstract class SavingsGoal with _$SavingsGoal {
   const SavingsGoal._();
 
   const factory SavingsGoal({

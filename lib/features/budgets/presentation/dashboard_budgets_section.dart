@@ -13,7 +13,7 @@ class DashboardBudgetsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statuses = ref.watch(budgetStatusesProvider).valueOrNull ?? const [];
+    final statuses = ref.watch(budgetStatusesProvider).value ?? const [];
     final budgeted = statuses.where((s) => s.hasBudget).toList();
 
     return Column(

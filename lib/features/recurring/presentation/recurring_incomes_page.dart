@@ -185,7 +185,7 @@ class _RecurringIncomeFormState extends ConsumerState<_RecurringIncomeForm> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesByTypeProvider(TransactionType.income));
-    final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
+    final accounts = ref.watch(accountsProvider).value ?? const [];
 
     if (_categoryId != null && !categories.any((c) => c.id == _categoryId)) {
       _categoryId = null;

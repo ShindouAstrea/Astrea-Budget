@@ -7,7 +7,7 @@ part 'transaction.g.dart';
 
 /// Movimiento de dinero (ingreso o gasto).
 @freezed
-class TransactionModel with _$TransactionModel {
+abstract class TransactionModel with _$TransactionModel {
   const TransactionModel._();
 
   const factory TransactionModel({

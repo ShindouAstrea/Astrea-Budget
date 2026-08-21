@@ -90,14 +90,14 @@ final householdMembersProvider = FutureProvider<List<HouseholdMember>>((ref) asy
 /// `true` si el household activo es compartido (no el personal). Útil para
 /// mostrar distintivos de autor sólo cuando hay más de una persona.
 final isSharedHouseholdProvider = Provider<bool>((ref) {
-  final household = ref.watch(currentHouseholdProvider).valueOrNull;
+  final household = ref.watch(currentHouseholdProvider).value;
   return household != null && !household.isPersonal;
 });
 
 /// Mapa `userId → nombre visible` de los miembros del household activo, para
 /// etiquetar quién registró cada movimiento en presupuestos compartidos.
 final householdMemberNamesProvider = Provider<Map<String, String>>((ref) {
-  final members = ref.watch(householdMembersProvider).valueOrNull ?? const [];
+  final members = ref.watch(householdMembersProvider).value ?? const [];
   return {for (final m in members) m.userId: m.displayName};
 });
 

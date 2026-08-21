@@ -59,7 +59,7 @@ drop type if exists invitation_status  cascade;
 create type transaction_type  as enum ('income', 'expense');
 create type service_type      as enum ('fijo', 'esporadico');
 create type service_category  as enum ('esencial', 'suscripcion'); -- extensible
-create type service_frequency as enum ('mensual', 'bimestral', 'anual', 'unico');
+create type service_frequency as enum ('mensual', 'bimestral', 'trimestral', 'semestral', 'anual', 'unico');
 create type payment_status    as enum ('pendiente', 'pagado');
 create type household_role     as enum ('owner', 'member');
 create type account_type       as enum ('efectivo', 'debito', 'credito', 'ahorro');
@@ -149,6 +149,10 @@ create table public.services (
   estimated_amount numeric(14,2) not null default 0 check (estimated_amount >= 0),
   billing_day      smallint check (billing_day between 1 and 31),
   frequency        service_frequency not null default 'mensual',
+  -- Ancla del ciclo para frecuencias NO mensuales: mes (día 1) del primer
+  -- cobro. Un servicio semestral anclado en marzo cobra en marzo y septiembre;
+  -- los demás meses no generan pago (ver service_schedule.dart).
+  first_charge_month date,
   active           boolean not null default true,
   created_at       timestamptz not null default now()
 );
@@ -194,6 +198,10 @@ create table public.service_payments (
   user_id        uuid not null references auth.users (id) on delete cascade,
   due_date       date not null,
   amount         numeric(14,2) not null check (amount >= 0),
+  -- true cuando el monto de ESTE período se ajustó a mano (p. ej. la
+  -- suscripción subió sólo este mes). Los montos ajustados no se pisan al
+  -- editar el monto estimado del servicio ni al regenerar el mes.
+  amount_overridden boolean not null default false,
   status         payment_status not null default 'pendiente',
   paid_date      date,
   transaction_id uuid references public.transactions (id) on delete set null,

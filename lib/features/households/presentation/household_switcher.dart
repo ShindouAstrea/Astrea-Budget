@@ -20,7 +20,7 @@ class HouseholdIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final household = ref.watch(currentHouseholdProvider).valueOrNull;
+    final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
@@ -56,8 +56,8 @@ class HouseholdSwitcherSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final households = ref.watch(householdsProvider).valueOrNull ?? const [];
-    final activeId = ref.watch(currentHouseholdProvider).valueOrNull?.id;
+    final households = ref.watch(householdsProvider).value ?? const [];
+    final activeId = ref.watch(currentHouseholdProvider).value?.id;
     final scheme = Theme.of(context).colorScheme;
 
     return SafeArea(

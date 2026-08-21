@@ -13,7 +13,7 @@ class DashboardSavingsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final goals = ref.watch(savingsGoalsProvider).valueOrNull ?? const [];
+    final goals = ref.watch(savingsGoalsProvider).value ?? const [];
     if (goals.isEmpty) return const SizedBox.shrink();
 
     return Column(

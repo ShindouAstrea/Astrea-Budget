@@ -40,7 +40,7 @@ class CategorySpending {
 /// Calcula el resumen del mes a partir de las transacciones y categorías.
 final monthSummaryProvider = Provider<AsyncValue<MonthSummary>>((ref) {
   final txAsync = ref.watch(monthlyTransactionsProvider);
-  final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
+  final categories = ref.watch(categoriesProvider).value ?? [];
   final byId = {for (final c in categories) c.id: c};
 
   return txAsync.whenData((transactions) {

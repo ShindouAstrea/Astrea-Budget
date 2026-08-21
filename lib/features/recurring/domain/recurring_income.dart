@@ -5,7 +5,7 @@ part 'recurring_income.g.dart';
 
 /// Plantilla de ingreso recurrente (se registra solo cada mes, ej. sueldo).
 @freezed
-class RecurringIncome with _$RecurringIncome {
+abstract class RecurringIncome with _$RecurringIncome {
   const factory RecurringIncome({
     required String id,
     @JsonKey(name: 'household_id') required String householdId,

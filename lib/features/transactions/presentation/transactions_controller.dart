@@ -99,7 +99,7 @@ final transactionFiltersProvider =
 final filteredTransactionsProvider =
     Provider<AsyncValue<List<TransactionModel>>>((ref) {
   final filters = ref.watch(transactionFiltersProvider);
-  final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+  final categories = ref.watch(categoriesProvider).value ?? const [];
   final categoryNames = {for (final c in categories) c.id: c.name};
   final query = filters.query.trim().toLowerCase();
 

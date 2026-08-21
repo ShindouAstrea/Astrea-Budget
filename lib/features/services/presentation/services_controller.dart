@@ -27,6 +27,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     required int estimatedAmount,
     int? billingDay,
     required ServiceFrequency frequency,
+    DateTime? firstChargeMonth,
   }) async {
     final householdId = await ref.read(activeHouseholdIdProvider.future);
     await _repo.createService(
@@ -37,6 +38,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
       estimatedAmount: estimatedAmount,
       billingDay: billingDay,
       frequency: frequency,
+      firstChargeMonth: firstChargeMonth,
     );
     ref.invalidateSelf();
     await future;
@@ -50,6 +52,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     required int estimatedAmount,
     int? billingDay,
     required ServiceFrequency frequency,
+    DateTime? firstChargeMonth,
     required bool active,
   }) async {
     await _repo.updateService(
@@ -60,6 +63,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
       estimatedAmount: estimatedAmount,
       billingDay: billingDay,
       frequency: frequency,
+      firstChargeMonth: firstChargeMonth,
       active: active,
     );
     ref.invalidateSelf();
@@ -88,12 +92,19 @@ final monthlyPaymentsProvider =
   final month = ref.watch(selectedMonthProvider);
   final cutoff = ref.watch(budgetCutoffProvider);
   final repo = ref.watch(serviceRepositoryProvider);
+  // La generación depende de la frecuencia y del ancla de cada servicio, así
+  // que se reutiliza la lista ya cargada (y se regenera si cambia).
+  final services = await ref.watch(servicesProvider.future);
   final range = BudgetCycle.bounds(month, cutoff);
 
-  await repo.generateMonthlyPayments(householdId, month);
+  await repo.generateMonthlyPayments(householdId, month, services: services);
   final startMonth = DateTime(range.start.year, range.start.month);
   if (startMonth != DateTime(month.year, month.month)) {
-    await repo.generateMonthlyPayments(householdId, startMonth);
+    await repo.generateMonthlyPayments(
+      householdId,
+      startMonth,
+      services: services,
+    );
   }
 
   return repo.fetchPaymentsBetween(householdId, range.start, range.end);
@@ -110,7 +121,12 @@ class PaymentActions {
   PaymentActions(this.ref);
   final Ref ref;
 
-  Future<void> markAsPaid(ServicePayment payment, {String? categoryId}) async {
+  /// [amount] permite pagar por un monto distinto al estimado del servicio.
+  Future<void> markAsPaid(
+    ServicePayment payment, {
+    String? categoryId,
+    int? amount,
+  }) async {
     final householdId = await ref.read(activeHouseholdIdProvider.future);
     final account = await ref.read(activeAccountProvider.future);
     await ref.read(serviceRepositoryProvider).markAsPaid(
@@ -118,6 +134,17 @@ class PaymentActions {
           payment: payment,
           categoryId: categoryId,
           accountId: account?.id,
+          amount: amount,
+        );
+    _refresh(payment.serviceId);
+  }
+
+  /// Ajusta el monto de un período concreto sin tocar el monto estimado del
+  /// servicio (p. ej. la suscripción subió sólo este mes).
+  Future<void> updateAmount(ServicePayment payment, int amount) async {
+    await ref.read(serviceRepositoryProvider).updatePaymentAmount(
+          payment: payment,
+          amount: amount,
         );
     _refresh(payment.serviceId);
   }

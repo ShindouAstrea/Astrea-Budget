@@ -19,9 +19,9 @@ class AccountsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountsProvider);
-    final balances = ref.watch(accountBalancesProvider).valueOrNull ?? const {};
-    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
-    final accounts = accountsAsync.valueOrNull ?? const [];
+    final balances = ref.watch(accountBalancesProvider).value ?? const {};
+    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).value ?? false;
+    final accounts = accountsAsync.value ?? const [];
 
     return Scaffold(
       appBar: AppBar(

@@ -38,7 +38,7 @@ class NotificationService {
       requestSoundPermission: false,
     );
     await _plugin.initialize(
-      const InitializationSettings(android: android, iOS: darwin),
+      settings: const InitializationSettings(android: android, iOS: darwin),
     );
     _initialized = true;
   }
@@ -99,7 +99,12 @@ class NotificationService {
   }) async {
     await init();
     try {
-      await _plugin.show(id, title, body, _budgetDetails);
+      await _plugin.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: _budgetDetails,
+      );
     } catch (e) {
       if (kDebugMode) debugPrint('[Notif] no se pudo mostrar: $e');
     }
@@ -128,11 +133,11 @@ class NotificationService {
     if (!scheduled.isAfter(tz.TZDateTime.now(tz.local))) return;
     try {
       await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduled,
-        _details,
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduled,
+        notificationDetails: _details,
         // Inexacto: no requiere el permiso especial SCHEDULE_EXACT_ALARM y
         // basta para un recordatorio diario.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -142,7 +147,7 @@ class NotificationService {
     }
   }
 
-  Future<void> cancel(int id) async => _plugin.cancel(id);
+  Future<void> cancel(int id) async => _plugin.cancel(id: id);
 
   Future<void> cancelAll() async {
     await init();

@@ -72,16 +72,16 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   /// Cuenta efectiva para el movimiento (la elegida, si no la activa, si no la
   /// primera). Refleja la misma resolución que muestra el dropdown.
   String? get _selectedAccountId {
-    final accounts = ref.read(accountsProvider).valueOrNull ?? const [];
+    final accounts = ref.read(accountsProvider).value ?? const [];
     return _accountId ??
-        ref.read(activeAccountProvider).valueOrNull?.id ??
+        ref.read(activeAccountProvider).value?.id ??
         (accounts.isNotEmpty ? accounts.first.id : null);
   }
 
   /// Las cuotas aplican sólo al crear un gasto pagado con tarjeta de crédito.
   bool get _installmentsApply {
     if (_isEditing || _type != TransactionType.expense) return false;
-    final accounts = ref.read(accountsProvider).valueOrNull ?? const [];
+    final accounts = ref.read(accountsProvider).value ?? const [];
     final selectedId = _selectedAccountId;
     for (final a in accounts) {
       if (a.id == selectedId) return a.type.isCredit;
@@ -104,7 +104,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   /// nombre de la categoría; si no hay tope o no se pasa, `null`.
   ({double over, String name})? _budgetOverInfo(int amount) {
     if (_type != TransactionType.expense || _categoryId == null) return null;
-    final statuses = ref.read(budgetStatusesProvider).valueOrNull ?? const [];
+    final statuses = ref.read(budgetStatusesProvider).value ?? const [];
     BudgetStatus? status;
     for (final s in statuses) {
       if (s.category.id == _categoryId) {
@@ -284,8 +284,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesByTypeProvider(_type));
-    final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
-    final activeAccountId = ref.watch(activeAccountProvider).valueOrNull?.id;
+    final accounts = ref.watch(accountsProvider).value ?? const [];
+    final activeAccountId = ref.watch(activeAccountProvider).value?.id;
     final finance = context.finance;
 
     // Si la categoría seleccionada ya no pertenece al tipo, la limpiamos.

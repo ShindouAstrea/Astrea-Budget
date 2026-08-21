@@ -27,16 +27,25 @@ class TourSlide {
   final String description;
 }
 
-/// Si el tour [arg] ya se mostró en este dispositivo.
-class TourSeenController extends FamilyNotifier<bool, String> {
+/// Si el tour [tourId] ya se mostró en este dispositivo.
+///
+/// En Riverpod 3 las familias reciben el argumento por constructor (ya no
+/// existe `FamilyNotifier` con `build(arg)`).
+class TourSeenController extends Notifier<bool> {
+  TourSeenController(this.tourId);
+
+  final String tourId;
+
   SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
 
+  String get _key => 'tour_seen_$tourId';
+
   @override
-  bool build(String arg) => _prefs.getBool('tour_seen_$arg') ?? false;
+  bool build() => _prefs.getBool(_key) ?? false;
 
   Future<void> markSeen() async {
     state = true;
-    await _prefs.setBool('tour_seen_$arg', true);
+    await _prefs.setBool(_key, true);
   }
 }
 

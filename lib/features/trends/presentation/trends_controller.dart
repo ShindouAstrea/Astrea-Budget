@@ -86,7 +86,7 @@ class TrendComparison {
 
 /// Comparación lista para la UI; null si no hay al menos dos meses con datos.
 final trendComparisonProvider = Provider<TrendComparison?>((ref) {
-  final trends = ref.watch(monthlyTrendsProvider).valueOrNull;
+  final trends = ref.watch(monthlyTrendsProvider).value;
   if (trends == null || trends.length < 2) return null;
   return TrendComparison(
     current: trends.last,

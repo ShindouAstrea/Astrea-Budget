@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/month_selector.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
 import '../domain/service.dart';
@@ -26,6 +28,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   late ServiceType _type;
   late ServiceCategory _category;
   late ServiceFrequency _frequency;
+  /// Mes del primer cobro: ancla del ciclo para frecuencias no mensuales.
+  late DateTime _firstChargeMonth;
   late bool _active;
   bool _saving = false;
 
@@ -43,6 +47,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     _type = s?.type ?? ServiceType.fijo;
     _category = s?.category ?? ServiceCategory.esencial;
     _frequency = s?.frequency ?? ServiceFrequency.mensual;
+    final now = DateTime.now();
+    _firstChargeMonth = s?.firstChargeMonth ?? DateTime(now.year, now.month);
     _active = s?.active ?? true;
   }
 
@@ -76,6 +82,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
           estimatedAmount: amount,
           billingDay: billingDay,
           frequency: _frequency,
+          firstChargeMonth: _firstChargeMonth,
           active: _active,
         );
       } else {
@@ -86,6 +93,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
           estimatedAmount: amount,
           billingDay: billingDay,
           frequency: _frequency,
+          firstChargeMonth: _firstChargeMonth,
         );
       }
       // Refresca los pagos del mes (pueden generarse nuevos).
@@ -129,6 +137,18 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
       context.showSuccess('Servicio eliminado');
       context.pop();
     }
+  }
+
+  /// Explica en palabras cuándo vuelve a cobrarse (ej. "cada 6 meses").
+  String _cycleHint() {
+    return switch (_frequency) {
+      ServiceFrequency.mensual => 'todos los meses',
+      ServiceFrequency.bimestral => 'cada 2 meses',
+      ServiceFrequency.trimestral => 'cada 3 meses',
+      ServiceFrequency.semestral => 'cada 6 meses',
+      ServiceFrequency.anual => 'una vez al año',
+      ServiceFrequency.unico => 'sólo esa vez',
+    };
   }
 
   @override
@@ -205,11 +225,13 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                 controller: _billingDay,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Día de cobro (1–31)',
-                  helperText:
-                      'Se generará automáticamente el pago de cada mes.',
-                  prefixIcon: Icon(Icons.event_outlined),
+                  helperText: _frequency.isMonthly
+                      ? 'Se generará automáticamente el pago de cada mes.'
+                      : 'Día del mes en que cae el cobro cuando toca.',
+                  helperMaxLines: 2,
+                  prefixIcon: const Icon(Icons.event_outlined),
                 ),
                 validator: Validators.billingDay,
               ),
@@ -227,6 +249,30 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                 onChanged: (v) =>
                     setState(() => _frequency = v ?? ServiceFrequency.mensual),
               ),
+              // Ancla del ciclo: sin ella no hay forma de saber en qué mes cae
+              // el cobro de un servicio anual/semestral.
+              if (_frequency.needsAnchor) ...[
+                const SizedBox(height: 8),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.today_outlined),
+                  title: const Text('Mes del primer cobro'),
+                  subtitle: Text(
+                    '${Formatters.monthYear(_firstChargeMonth)} · '
+                    '${_cycleHint()}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final picked = await showMonthPicker(
+                      context,
+                      initial: _firstChargeMonth,
+                    );
+                    if (picked != null) {
+                      setState(() => _firstChargeMonth = picked);
+                    }
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
             ],
             if (_isEditing)

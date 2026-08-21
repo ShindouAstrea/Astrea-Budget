@@ -42,12 +42,19 @@ enum ServiceCategory {
 enum ServiceFrequency {
   mensual('mensual', 'Mensual'),
   bimestral('bimestral', 'Bimestral'),
+  trimestral('trimestral', 'Trimestral'),
+  semestral('semestral', 'Semestral'),
   anual('anual', 'Anual'),
-  unico('unico', 'Único');
+  unico('unico', 'Único (una sola vez)');
 
   const ServiceFrequency(this.wire, this.label);
   final String wire;
   final String label;
+
+  bool get isMonthly => this == ServiceFrequency.mensual;
+
+  /// ¿Necesita saber en qué mes cae el primer cobro? (todo lo no mensual)
+  bool get needsAnchor => !isMonthly;
 
   static ServiceFrequency fromWire(String value) =>
       values.firstWhere((e) => e.wire == value);

@@ -8,8 +8,10 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/state_views.dart';
+import '../data/service_repository.dart';
 import '../domain/service.dart';
 import '../domain/service_payment.dart';
+import 'payment_amount_sheet.dart';
 import 'services_controller.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
@@ -78,7 +80,8 @@ class ServiceDetailPage extends ConsumerWidget {
               }
               return Column(
                 children: [
-                  for (final p in payments) _PaymentRow(payment: p),
+                  for (final p in payments)
+                    _PaymentRow(payment: p, serviceName: service.name),
                 ],
               );
             },
@@ -107,11 +110,28 @@ class _InfoCard extends StatelessWidget {
             if (service.isFixed && service.billingDay != null)
               _row(context, 'Día de cobro', 'Día ${service.billingDay}'),
             _row(context, 'Frecuencia', service.frequency.label),
+            if (service.isFixed && service.frequency.needsAnchor)
+              _row(
+                context,
+                'Primer cobro',
+                service.firstChargeMonth == null
+                    ? 'Sin definir'
+                    : Formatters.monthYear(service.firstChargeMonth!),
+              ),
+            if (service.autoGenerates && !service.frequency.isMonthly)
+              _row(context, 'Próximo cobro', _nextCharge(service)),
             _row(context, 'Estado', service.active ? 'Activo' : 'Inactivo'),
           ],
         ),
       ),
     );
+  }
+
+  /// Mes del próximo cobro según la frecuencia (hoy incluido).
+  String _nextCharge(Service service) {
+    final next = service.nextChargeFrom(DateTime.now());
+    if (next == null) return 'Sin próximos cobros';
+    return Formatters.monthYear(next);
   }
 
   Widget _row(BuildContext context, String label, String value) {
@@ -134,8 +154,9 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _PaymentRow extends ConsumerWidget {
-  const _PaymentRow({required this.payment});
+  const _PaymentRow({required this.payment, required this.serviceName});
   final ServicePayment payment;
+  final String serviceName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -144,6 +165,11 @@ class _PaymentRow extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        onTap: () => PaymentAmountSheet.show(
+          context,
+          payment: payment,
+          serviceName: serviceName,
+        ),
         leading: CircleAvatar(
           backgroundColor:
               paid ? Colors.green.withValues(alpha: 0.15) : scheme.errorContainer,
@@ -152,7 +178,22 @@ class _PaymentRow extends ConsumerWidget {
             color: paid ? Colors.green.shade700 : scheme.error,
           ),
         ),
-        title: Text(Formatters.currency(payment.amount)),
+        title: Row(
+          children: [
+            Text(Formatters.currency(payment.amount)),
+            if (payment.amountOverridden) ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Monto ajustado para este período',
+                child: Icon(
+                  Icons.edit_note,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
         subtitle: Text(
           paid && payment.paidDate != null
               ? 'Pagado el ${Formatters.dayMonthYear(payment.paidDate!)}'
@@ -160,16 +201,33 @@ class _PaymentRow extends ConsumerWidget {
         ),
         trailing: paid
             ? TextButton(
-                onPressed: () =>
-                    ref.read(paymentActionsProvider).markAsPending(payment),
+                onPressed: () async {
+                  try {
+                    await ref
+                        .read(paymentActionsProvider)
+                        .markAsPending(payment);
+                  } on ServiceRepositoryException catch (e) {
+                    if (context.mounted) context.showError(e.message);
+                  } catch (_) {
+                    if (context.mounted) {
+                      context.showError('No se pudo revertir el pago');
+                    }
+                  }
+                },
                 child: const Text('Revertir'),
               )
             : FilledButton.tonal(
                 onPressed: () async {
-                  await ref
-                      .read(paymentActionsProvider)
-                      .markAsPaid(payment);
-                  if (context.mounted) context.showSuccess('Pago registrado');
+                  try {
+                    await ref.read(paymentActionsProvider).markAsPaid(payment);
+                    if (context.mounted) {
+                      context.showSuccess('Pago registrado');
+                    }
+                  } catch (_) {
+                    if (context.mounted) {
+                      context.showError('No se pudo registrar el pago');
+                    }
+                  }
                 },
                 child: const Text('Pagar'),
               ),

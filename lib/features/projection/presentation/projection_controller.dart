@@ -109,7 +109,7 @@ class MonthProjection {
 /// Proyección del mes seleccionado a partir de transacciones y pagos.
 final monthProjectionProvider = Provider<AsyncValue<MonthProjection>>((ref) {
   final txAsync = ref.watch(monthlyTransactionsProvider);
-  final payments = ref.watch(monthlyPaymentsProvider).valueOrNull ?? const [];
+  final payments = ref.watch(monthlyPaymentsProvider).value ?? const [];
   final month = ref.watch(selectedMonthProvider);
   final cutoff = ref.watch(budgetCutoffProvider);
 

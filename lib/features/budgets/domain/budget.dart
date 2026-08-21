@@ -5,7 +5,7 @@ part 'budget.g.dart';
 
 /// Tope mensual de gasto para una categoría dentro de un household.
 @freezed
-class Budget with _$Budget {
+abstract class Budget with _$Budget {
   const factory Budget({
     required String id,
     @JsonKey(name: 'household_id') required String householdId,

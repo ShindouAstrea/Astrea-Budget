@@ -9,7 +9,7 @@ part 'account.g.dart';
 
 /// Cuenta / billetera (efectivo, débito, crédito, ahorro) de un household.
 @freezed
-class Account with _$Account {
+abstract class Account with _$Account {
   const Account._();
 
   const factory Account({

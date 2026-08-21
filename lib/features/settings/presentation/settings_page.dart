@@ -29,7 +29,7 @@ class SettingsPage extends ConsumerWidget {
     final profile = ref.watch(currentProfileProvider);
     final security = ref.watch(securityControllerProvider);
 
-    final name = profile.valueOrNull?.displayName ??
+    final name = profile.value?.displayName ??
         user?.userMetadata?['name'] as String? ??
         'Usuario';
 
@@ -504,7 +504,7 @@ class _BudgetSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final householdAsync = ref.watch(currentHouseholdProvider);
     final received =
-        ref.watch(receivedInvitationsProvider).valueOrNull ?? const [];
+        ref.watch(receivedInvitationsProvider).value ?? const [];
     final scheme = Theme.of(context).colorScheme;
 
     return Column(

@@ -12,7 +12,7 @@ class DashboardProjectionSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projection = ref.watch(monthProjectionProvider).valueOrNull;
+    final projection = ref.watch(monthProjectionProvider).value;
     if (projection == null || !projection.isOngoing) {
       return const SizedBox.shrink();
     }

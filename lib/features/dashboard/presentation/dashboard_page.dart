@@ -17,6 +17,7 @@ import '../../savings/presentation/dashboard_savings_section.dart';
 import '../../trends/presentation/dashboard_trends_section.dart';
 import '../../notifications/presentation/notifications_controller.dart';
 import '../../services/domain/service_payment.dart';
+import '../../services/presentation/payment_amount_sheet.dart';
 import '../../services/presentation/services_controller.dart';
 import '../../transactions/presentation/transactions_controller.dart';
 import 'dashboard_controller.dart';
@@ -39,7 +40,7 @@ class DashboardPage extends ConsumerWidget {
     // Genera los ingresos recurrentes vencidos al abrir; si registró alguno,
     // refresca los movimientos del mes (cascada al resumen/proyección).
     ref.listen(recurringIncomeGenerationProvider, (_, next) {
-      if (next.valueOrNull == true) {
+      if (next.value == true) {
         ref.invalidate(monthlyTransactionsProvider);
       }
     });
@@ -366,7 +367,7 @@ class _UpcomingPaymentsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final paymentsAsync = ref.watch(monthlyPaymentsProvider);
     final servicesById = {
-      for (final s in ref.watch(servicesProvider).valueOrNull ?? []) s.id: s,
+      for (final s in ref.watch(servicesProvider).value ?? []) s.id: s,
     };
 
     return Column(
@@ -445,6 +446,13 @@ class _PaymentTile extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        // Tocar el pago permite ajustar el monto de ESE mes (la suscripción
+        // subió, la boleta llegó más alta) sin tocar el monto del servicio.
+        onTap: () => PaymentAmountSheet.show(
+          context,
+          payment: payment,
+          serviceName: serviceName,
+        ),
         leading: CircleAvatar(
           backgroundColor: payment.isOverdue
               ? scheme.errorContainer
@@ -457,14 +465,19 @@ class _PaymentTile extends ConsumerWidget {
         title: Text(serviceName),
         subtitle: Text(
           '${Formatters.dayMonthYear(payment.dueDate)} · '
-          '${Formatters.currency(payment.amount)}',
+          '${Formatters.currency(payment.amount)}'
+          '${payment.amountOverridden ? ' (ajustado)' : ''}',
         ),
         trailing: FilledButton.tonal(
           onPressed: () async {
-            await ref
-                .read(paymentActionsProvider)
-                .markAsPaid(payment);
-            if (context.mounted) context.showSuccess('Pago registrado');
+            try {
+              await ref.read(paymentActionsProvider).markAsPaid(payment);
+              if (context.mounted) context.showSuccess('Pago registrado');
+            } catch (_) {
+              if (context.mounted) {
+                context.showError('No se pudo registrar el pago');
+              }
+            }
           },
           child: const Text('Pagar'),
         ),

@@ -41,7 +41,7 @@ class _AstreaBudgetAppState extends ConsumerState<AstreaBudgetApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Re-bloquea al volver del segundo plano (si hay PIN configurado).
     if (state == AppLifecycleState.paused) {
-      final settings = ref.read(securityControllerProvider).valueOrNull;
+      final settings = ref.read(securityControllerProvider).value;
       if (settings?.pinEnabled ?? false) {
         ref.read(appLockProvider.notifier).lock();
       }
@@ -54,7 +54,7 @@ class _AstreaBudgetAppState extends ConsumerState<AstreaBudgetApp>
     // caché: households, perfil, invitaciones y selección de presupuesto/cuenta.
     // Sin esto, un nuevo usuario vería los datos cacheados del anterior.
     ref.listen(authStateChangesProvider, (_, next) {
-      final event = next.valueOrNull?.event;
+      final event = next.value?.event;
       if (event == AuthChangeEvent.signedIn ||
           event == AuthChangeEvent.signedOut) {
         // Re-lee la selección con la clave del nuevo usuario y refresca los

@@ -32,7 +32,7 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = navigationShell.currentIndex;
     final pendingInvites =
-        ref.watch(receivedInvitationsProvider).valueOrNull?.length ?? 0;
+        ref.watch(receivedInvitationsProvider).value?.length ?? 0;
 
     return Scaffold(
       body: navigationShell,

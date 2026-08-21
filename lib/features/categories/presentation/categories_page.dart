@@ -16,7 +16,7 @@ class CategoriesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
-    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
+    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).value ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Categorías')),

@@ -336,9 +336,9 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
+    final accounts = ref.watch(accountsProvider).value ?? const [];
     final myId = ref.watch(currentUserProvider)?.id;
-    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
+    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).value ?? false;
     final canDelete =
         _isEditing && (widget.goal!.userId == myId || isOwner);
 

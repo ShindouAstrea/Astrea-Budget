@@ -18,7 +18,7 @@ class BudgetsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statusesAsync = ref.watch(budgetStatusesProvider);
     final isOwner =
-        ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
+        ref.watch(isActiveHouseholdOwnerProvider).value ?? false;
 
     return Scaffold(
       appBar: AppBar(

@@ -13,7 +13,7 @@ class SharingPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final householdAsync = ref.watch(currentHouseholdProvider);
-    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).valueOrNull ?? false;
+    final isOwner = ref.watch(isActiveHouseholdOwnerProvider).value ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Compartir')),
@@ -232,7 +232,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
 class _PendingInvitations extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final invitations = ref.watch(sentInvitationsProvider).valueOrNull ?? const [];
+    final invitations = ref.watch(sentInvitationsProvider).value ?? const [];
     if (invitations.isEmpty) return const SizedBox.shrink();
 
     return Column(

@@ -47,6 +47,7 @@ lib/
 
 supabase/
 ├── schema.sql                # tablas + RLS + trigger de categorías + enums
+├── migrations/               # cambios incrementales sobre bases ya creadas
 └── seed.sql                  # datos de ejemplo (opcional)
 ```
 
@@ -62,6 +63,10 @@ supabase/
    *"Allow anonymous sign-ins"*. El invitado usa la app con un usuario anónimo
    y, al registrarse desde Ajustes, su cuenta (y todos sus datos) se conserva.
 5. Copia tu **Project URL** y **anon public key** (Settings → API).
+6. Si tu base ya existía, aplica los scripts de
+   [`supabase/migrations/`](supabase/migrations/) en orden (cada uno indica si
+   hay bloques que deben ejecutarse por separado). `schema.sql` ya los incluye
+   para instalaciones nuevas.
 
 ### Datos de ejemplo (seed)
 

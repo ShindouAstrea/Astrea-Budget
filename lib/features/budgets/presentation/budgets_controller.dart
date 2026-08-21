@@ -49,8 +49,8 @@ class BudgetStatus {
 /// Une el gasto por categoría (del resumen del mes) con los topes definidos.
 final budgetStatusesProvider = Provider<AsyncValue<List<BudgetStatus>>>((ref) {
   final summaryAsync = ref.watch(monthSummaryProvider);
-  final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
-  final budgets = ref.watch(budgetsProvider).valueOrNull ?? const [];
+  final categories = ref.watch(categoriesProvider).value ?? const [];
+  final budgets = ref.watch(budgetsProvider).value ?? const [];
   final budgetByCat = {for (final b in budgets) b.categoryId: b.amount};
 
   return summaryAsync.whenData((summary) {

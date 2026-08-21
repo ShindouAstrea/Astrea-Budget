@@ -6,13 +6,14 @@ part of 'service_payment.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$ServicePaymentImpl _$$ServicePaymentImplFromJson(Map<String, dynamic> json) =>
-    _$ServicePaymentImpl(
+_ServicePayment _$ServicePaymentFromJson(Map<String, dynamic> json) =>
+    _ServicePayment(
       id: json['id'] as String,
       serviceId: json['service_id'] as String,
       userId: json['user_id'] as String,
       dueDate: DateTime.parse(json['due_date'] as String),
       amount: (json['amount'] as num).toDouble(),
+      amountOverridden: json['amount_overridden'] as bool? ?? false,
       status:
           $enumDecodeNullable(_$PaymentStatusEnumMap, json['status']) ??
           PaymentStatus.pendiente,
@@ -22,18 +23,18 @@ _$ServicePaymentImpl _$$ServicePaymentImplFromJson(Map<String, dynamic> json) =>
       transactionId: json['transaction_id'] as String?,
     );
 
-Map<String, dynamic> _$$ServicePaymentImplToJson(
-  _$ServicePaymentImpl instance,
-) => <String, dynamic>{
-  'id': instance.id,
-  'service_id': instance.serviceId,
-  'user_id': instance.userId,
-  'due_date': instance.dueDate.toIso8601String(),
-  'amount': instance.amount,
-  'status': _$PaymentStatusEnumMap[instance.status]!,
-  'paid_date': instance.paidDate?.toIso8601String(),
-  'transaction_id': instance.transactionId,
-};
+Map<String, dynamic> _$ServicePaymentToJson(_ServicePayment instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'service_id': instance.serviceId,
+      'user_id': instance.userId,
+      'due_date': instance.dueDate.toIso8601String(),
+      'amount': instance.amount,
+      'amount_overridden': instance.amountOverridden,
+      'status': _$PaymentStatusEnumMap[instance.status]!,
+      'paid_date': instance.paidDate?.toIso8601String(),
+      'transaction_id': instance.transactionId,
+    };
 
 const _$PaymentStatusEnumMap = {
   PaymentStatus.pendiente: 'pendiente',

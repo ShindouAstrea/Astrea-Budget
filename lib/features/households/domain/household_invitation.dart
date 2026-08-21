@@ -5,7 +5,7 @@ part 'household_invitation.g.dart';
 
 /// Invitación emitida por el owner de un household (vista del que invita).
 @freezed
-class HouseholdInvitation with _$HouseholdInvitation {
+abstract class HouseholdInvitation with _$HouseholdInvitation {
   const factory HouseholdInvitation({
     required String id,
     @JsonKey(name: 'household_id') required String householdId,
@@ -21,7 +21,7 @@ class HouseholdInvitation with _$HouseholdInvitation {
 /// Invitación recibida por el usuario actual (vía RPC `my_invitations`, que
 /// incluye el nombre del household y de quien invita, no legibles por RLS aún).
 @freezed
-class ReceivedInvitation with _$ReceivedInvitation {
+abstract class ReceivedInvitation with _$ReceivedInvitation {
   const factory ReceivedInvitation({
     required String id,
     @JsonKey(name: 'household_id') required String householdId,
