@@ -12,6 +12,7 @@ import '../../households/presentation/household_switcher.dart';
 import '../../onboarding/presentation/feature_tour.dart';
 import '../../onboarding/presentation/feature_tours.dart';
 import '../domain/service.dart';
+import '../domain/service_costs.dart';
 import 'services_controller.dart';
 
 class ServicesPage extends ConsumerWidget {
@@ -80,6 +81,7 @@ class ServicesPage extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [
+                _FixedCostCard(services: services),
                 if (fixed.isNotEmpty) ...[
                   _SectionHeader('Servicios fijos'),
                   for (final s in fixed)
@@ -96,6 +98,92 @@ class ServicesPage extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Cuánto pesan al mes los servicios fijos. Como un anual sólo aparece en su
+/// mes, sin este prorrateo no hay forma de saber el costo real de tener todas
+/// las suscripciones contratadas.
+class _FixedCostCard extends StatelessWidget {
+  const _FixedCostCard({required this.services});
+
+  final List<Service> services;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = summarizeFixedCosts(services, asOf: DateTime.now());
+    if (summary.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      color: scheme.primaryContainer.withValues(alpha: 0.35),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Costo fijo mensual',
+                        style: theme.textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        Formatters.currency(summary.monthly),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${Formatters.currency(summary.yearly)} al año',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            _line(context, Icons.home_outlined, 'Esenciales', summary.essential),
+            const SizedBox(height: 4),
+            _line(context, Icons.subscriptions_outlined, 'Suscripciones',
+                summary.subscriptions),
+            const SizedBox(height: 8),
+            Text(
+              'Los cobros no mensuales se prorratean: un anual de \$60.000 '
+              'cuenta como \$5.000 al mes.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _line(BuildContext context, IconData icon, String label, double v) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.primary),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+        Text(
+          Formatters.currency(v),
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 }
@@ -138,6 +226,9 @@ class _ServiceTile extends StatelessWidget {
       parts.add('Esporádico');
     }
     parts.add(Formatters.currency(service.estimatedAmount));
+    if (service.lastChargeMonth != null) {
+      parts.add('hasta ${Formatters.monthYear(service.lastChargeMonth!)}');
+    }
     return parts.join(' · ');
   }
 
@@ -162,22 +253,39 @@ class _ServiceTile extends StatelessWidget {
         ),
         title: Text(service.name),
         subtitle: Text(_subtitle()),
-        trailing: _StatusBadge(status: status, active: service.active),
+        trailing: _StatusBadge(
+          status: status,
+          active: service.active,
+          ended: service.endedBefore(DateTime.now()),
+        ),
       ),
     );
   }
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status, required this.active});
+  const _StatusBadge({
+    required this.status,
+    required this.active,
+    required this.ended,
+  });
   final PaymentStatus? status;
   final bool active;
+
+  /// Su mes de término ya pasó: no volverá a generar pagos.
+  final bool ended;
 
   @override
   Widget build(BuildContext context) {
     if (!active) {
       return const Chip(
         label: Text('Inactivo'),
+        visualDensity: VisualDensity.compact,
+      );
+    }
+    if (ended) {
+      return const Chip(
+        label: Text('Terminado'),
         visualDensity: VisualDensity.compact,
       );
     }

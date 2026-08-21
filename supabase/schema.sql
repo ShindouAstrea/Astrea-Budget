@@ -153,6 +153,9 @@ create table public.services (
   -- cobro. Un servicio semestral anclado en marzo cobra en marzo y septiembre;
   -- los demás meses no generan pago (ver service_schedule.dart).
   first_charge_month date,
+  -- Mes (día 1) del último cobro: para suscripciones canceladas que siguen
+  -- corriendo hasta cierta fecha. Null = sin término.
+  last_charge_month  date,
   -- Categoría de gasto a la que se imputa el pago del servicio (para que
   -- cuente en los presupuestos por categoría y en el gráfico del dashboard).
   category_id      uuid references public.categories (id) on delete set null,

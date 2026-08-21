@@ -49,6 +49,7 @@ class ServiceRepository {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    DateTime? lastChargeMonth,
     String? expenseCategoryId,
   }) async {
     final row = await _client
@@ -63,6 +64,8 @@ class ServiceRepository {
           'billing_day': billingDay,
           'frequency': frequency.wire,
           'first_charge_month': _monthDate(firstChargeMonth ?? DateTime.now()),
+          'last_charge_month':
+              lastChargeMonth == null ? null : _monthDate(lastChargeMonth),
           'category_id': expenseCategoryId,
         })
         .select()
@@ -83,6 +86,7 @@ class ServiceRepository {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    DateTime? lastChargeMonth,
     String? expenseCategoryId,
     required bool active,
   }) async {
@@ -97,6 +101,9 @@ class ServiceRepository {
           'frequency': frequency.wire,
           if (firstChargeMonth != null)
             'first_charge_month': _monthDate(firstChargeMonth),
+          // Se manda siempre (aunque sea null) para poder quitar el término.
+          'last_charge_month':
+              lastChargeMonth == null ? null : _monthDate(lastChargeMonth),
           'category_id': expenseCategoryId,
           'active': active,
         })
@@ -147,6 +154,28 @@ class ServiceRepository {
     }
     if (obsolete.isEmpty) return;
     await _client.from('service_payments').delete().inFilter('id', obsolete);
+  }
+
+  /// Cambia sólo el monto estimado (la suscripción subió de precio de forma
+  /// permanente) y lo propaga a los pagos pendientes que aún no vencen, igual
+  /// que [updateService], sin tocar el resto de la configuración.
+  Future<Service> updateEstimatedAmount(String id, int amount) async {
+    final row = await _client
+        .from('services')
+        .update({'estimated_amount': amount})
+        .eq('id', id)
+        .select()
+        .single();
+
+    await _client
+        .from('service_payments')
+        .update({'amount': amount})
+        .eq('service_id', id)
+        .eq('status', PaymentStatus.pendiente.wire)
+        .eq('amount_overridden', false)
+        .gte('due_date', _date(_today()));
+
+    return Service.fromJson(row);
   }
 
   Future<void> deleteService(String id) async {

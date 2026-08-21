@@ -12,6 +12,7 @@ import '../../categories/presentation/categories_controller.dart';
 import '../data/service_repository.dart';
 import '../domain/service.dart';
 import '../domain/service_payment.dart';
+import '../domain/service_price_history.dart';
 import 'payment_amount_sheet.dart';
 import 'services_controller.dart';
 
@@ -53,6 +54,7 @@ class ServiceDetailPage extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
           _InfoCard(service: service),
+          _PriceEvolutionCard(payments: paymentsAsync.value ?? const []),
           const SizedBox(height: 24),
           Text(
             'Historial de pagos',
@@ -82,7 +84,7 @@ class ServiceDetailPage extends ConsumerWidget {
               return Column(
                 children: [
                   for (final p in payments)
-                    _PaymentRow(payment: p, serviceName: service.name),
+                    _PaymentRow(payment: p, service: service),
                 ],
               );
             },
@@ -118,6 +120,12 @@ class _InfoCard extends ConsumerWidget {
             if (service.isFixed && service.billingDay != null)
               _row(context, 'Día de cobro', 'Día ${service.billingDay}'),
             _row(context, 'Frecuencia', service.frequency.label),
+            if (service.lastChargeMonth != null)
+              _row(
+                context,
+                'Último cobro',
+                Formatters.monthYear(service.lastChargeMonth!),
+              ),
             if (service.isFixed && service.frequency.needsAnchor)
               _row(
                 context,
@@ -161,10 +169,91 @@ class _InfoCard extends ConsumerWidget {
   }
 }
 
+/// Cómo ha cambiado el precio del servicio, deducido de sus pagos. No aparece
+/// mientras el monto no haya cambiado nunca.
+class _PriceEvolutionCard extends StatelessWidget {
+  const _PriceEvolutionCard({required this.payments});
+
+  final List<ServicePayment> payments;
+
+  @override
+  Widget build(BuildContext context) {
+    final changes = priceHistory(payments);
+    if (changes.length < 2) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final last = changes.last;
+    final subiendo = last.isIncrease;
+    final color = subiendo ? scheme.error : Colors.green.shade700;
+    // De más reciente a más antiguo, acotado para no llenar la pantalla.
+    final visibles = changes.reversed.take(4).toList();
+
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  subiendo ? Icons.trending_up : Icons.trending_down,
+                  color: color,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Evolución del precio',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text(
+                  '${subiendo ? '+' : ''}${last.percent!.toStringAsFixed(0)}%',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: color, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${Formatters.currency(last.previous!)} → '
+              '${Formatters.currency(last.amount)} desde '
+              '${Formatters.monthYear(last.since)}',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            for (final c in visibles)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      Formatters.monthYear(c.since),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    Text(
+                      Formatters.currency(c.amount),
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PaymentRow extends ConsumerWidget {
-  const _PaymentRow({required this.payment, required this.serviceName});
+  const _PaymentRow({required this.payment, required this.service});
   final ServicePayment payment;
-  final String serviceName;
+  final Service service;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -176,7 +265,8 @@ class _PaymentRow extends ConsumerWidget {
         onTap: () => PaymentAmountSheet.show(
           context,
           payment: payment,
-          serviceName: serviceName,
+          serviceName: service.name,
+          service: service,
         ),
         leading: CircleAvatar(
           backgroundColor:

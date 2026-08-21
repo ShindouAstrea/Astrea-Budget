@@ -28,6 +28,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    DateTime? lastChargeMonth,
     String? expenseCategoryId,
   }) async {
     final householdId = await ref.read(activeHouseholdIdProvider.future);
@@ -40,6 +41,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
       billingDay: billingDay,
       frequency: frequency,
       firstChargeMonth: firstChargeMonth,
+      lastChargeMonth: lastChargeMonth,
       expenseCategoryId: expenseCategoryId,
     );
     ref.invalidateSelf();
@@ -55,6 +57,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    DateTime? lastChargeMonth,
     String? expenseCategoryId,
     required bool active,
   }) async {
@@ -67,9 +70,18 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
       billingDay: billingDay,
       frequency: frequency,
       firstChargeMonth: firstChargeMonth,
+      lastChargeMonth: lastChargeMonth,
       expenseCategoryId: expenseCategoryId,
       active: active,
     );
+    ref.invalidateSelf();
+    await future;
+  }
+
+  /// Sube (o baja) el monto estimado del servicio dejando todo lo demás igual.
+  /// Es lo que se ofrece al pagar por un monto distinto de forma permanente.
+  Future<void> updateEstimatedAmount(String id, int amount) async {
+    await _repo.updateEstimatedAmount(id, amount);
     ref.invalidateSelf();
     await future;
   }

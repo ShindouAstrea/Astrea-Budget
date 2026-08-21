@@ -78,6 +78,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   late ServiceFrequency _frequency;
   /// Mes del primer cobro: ancla del ciclo para frecuencias no mensuales.
   late DateTime _firstChargeMonth;
+  /// Mes del último cobro (null = sin fecha de término).
+  late DateTime? _lastChargeMonth;
   /// Categoría de gasto a la que se imputa el pago (null = sin categoría).
   late String? _expenseCategoryId;
   late bool _active;
@@ -99,6 +101,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     _frequency = s?.frequency ?? ServiceFrequency.mensual;
     final now = DateTime.now();
     _firstChargeMonth = s?.firstChargeMonth ?? DateTime(now.year, now.month);
+    _lastChargeMonth = s?.lastChargeMonth;
     _expenseCategoryId = s?.expenseCategoryId;
     _active = s?.active ?? true;
   }
@@ -113,6 +116,11 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final end = _lastChargeMonth;
+    if (end != null && end.isBefore(_firstChargeMonth)) {
+      context.showError('El último cobro no puede ser antes del primero');
+      return;
+    }
     final amount = Validators.amount(_amount.text) == null
         ? int.parse(_amount.text)
         : 0;
@@ -134,6 +142,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
           billingDay: billingDay,
           frequency: _frequency,
           firstChargeMonth: _firstChargeMonth,
+          lastChargeMonth: _lastChargeMonth,
           expenseCategoryId: _expenseCategoryId,
           active: _active,
         );
@@ -146,6 +155,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
           billingDay: billingDay,
           frequency: _frequency,
           firstChargeMonth: _firstChargeMonth,
+          lastChargeMonth: _lastChargeMonth,
           expenseCategoryId: _expenseCategoryId,
         );
       }
@@ -333,6 +343,35 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                   },
                 ),
               ],
+              // Suscripción cancelada que sigue corriendo: en vez de acordarse
+              // de pausarla el mes exacto, el ciclo se apaga solo.
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.event_busy_outlined),
+                title: const Text('Último cobro (opcional)'),
+                subtitle: Text(
+                  _lastChargeMonth == null
+                      ? 'Sin fecha de término: se cobra indefinidamente'
+                      : 'Hasta ${Formatters.monthYear(_lastChargeMonth!)}',
+                ),
+                trailing: _lastChargeMonth == null
+                    ? const Icon(Icons.chevron_right)
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Quitar término',
+                        onPressed: () =>
+                            setState(() => _lastChargeMonth = null),
+                      ),
+                onTap: () async {
+                  final picked = await showMonthPicker(
+                    context,
+                    initial: _lastChargeMonth ?? _firstChargeMonth,
+                  );
+                  if (picked != null) {
+                    setState(() => _lastChargeMonth = picked);
+                  }
+                },
+              ),
               const SizedBox(height: 16),
             ],
             if (_isEditing)

@@ -6,6 +6,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/state_views.dart';
 import '../data/service_repository.dart';
+import '../domain/service.dart';
 import '../domain/service_payment.dart';
 import 'services_controller.dart';
 
@@ -21,16 +22,22 @@ class PaymentAmountSheet extends ConsumerStatefulWidget {
     super.key,
     required this.payment,
     required this.serviceName,
+    this.service,
   });
 
   final ServicePayment payment;
   final String serviceName;
+
+  /// Servicio del pago, si la lista ya está cargada: permite ofrecer subir el
+  /// monto estimado cuando el cobro cambió de forma permanente.
+  final Service? service;
 
   /// Abre la hoja centralizando el estilo (drag handle + teclado).
   static Future<void> show(
     BuildContext context, {
     required ServicePayment payment,
     required String serviceName,
+    Service? service,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -39,6 +46,7 @@ class PaymentAmountSheet extends ConsumerStatefulWidget {
       builder: (_) => PaymentAmountSheet(
         payment: payment,
         serviceName: serviceName,
+        service: service,
       ),
     );
   }
@@ -52,6 +60,8 @@ class _PaymentAmountSheetState extends ConsumerState<PaymentAmountSheet> {
   late final TextEditingController _amount;
   late DateTime _paidDate;
   bool _saving = false;
+  /// ¿Además de este mes, dejar el monto nuevo como estimado del servicio?
+  bool _updateEstimate = false;
 
   ServicePayment get _payment => widget.payment;
   bool get _pending => !_payment.isPaid;
@@ -60,6 +70,8 @@ class _PaymentAmountSheetState extends ConsumerState<PaymentAmountSheet> {
   void initState() {
     super.initState();
     _amount = TextEditingController(text: _payment.amount.round().toString());
+    // El bloque de "subió de precio" aparece/desaparece según lo que se teclee.
+    _amount.addListener(() => setState(() {}));
     _paidDate = _defaultPaidDate();
   }
 
@@ -101,6 +113,12 @@ class _PaymentAmountSheetState extends ConsumerState<PaymentAmountSheet> {
         await actions.markAsPaid(_payment, amount: amount, paidDate: _paidDate);
       } else {
         await actions.updateAmount(_payment, amount);
+      }
+      final service = widget.service;
+      if (_updateEstimate && service != null) {
+        await ref
+            .read(servicesProvider.notifier)
+            .updateEstimatedAmount(service.id, amount);
       }
       if (!mounted) return;
       context.showSuccess(alsoPay ? 'Pago registrado' : 'Monto actualizado');
@@ -156,6 +174,12 @@ class _PaymentAmountSheetState extends ConsumerState<PaymentAmountSheet> {
               ),
               validator: Validators.amount,
             ),
+            _EstimateUpdate(
+              service: widget.service,
+              typed: Formatters.parseAmount(_amount.text),
+              value: _updateEstimate,
+              onChanged: (v) => setState(() => _updateEstimate = v),
+            ),
             if (_pending) ...[
               const SizedBox(height: 12),
               ListTile(
@@ -199,6 +223,54 @@ class _PaymentAmountSheetState extends ConsumerState<PaymentAmountSheet> {
                 child: const Text('Guardar monto'),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Aviso de "subió de precio": aparece cuando el monto tecleado no coincide con
+/// el estimado del servicio y ofrece dejarlo como nuevo estimado, que es el
+/// paso que si no hay que hacer a mano entrando a editar el servicio.
+class _EstimateUpdate extends StatelessWidget {
+  const _EstimateUpdate({
+    required this.service,
+    required this.typed,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final Service? service;
+  final int? typed;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = service;
+    if (s == null || typed == null) return const SizedBox.shrink();
+    final estimated = s.estimatedAmount.round();
+    if (typed == estimated) return const SizedBox.shrink();
+
+    final subio = typed! > estimated;
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        value: value,
+        onChanged: (v) => onChanged(v ?? false),
+        title: Text(
+          subio ? 'El servicio subió de precio' : 'El servicio bajó de precio',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          'Dejar ${Formatters.currency(typed!)} como monto estimado '
+          '(hoy es ${Formatters.currency(estimated)}). Se aplica también a los '
+          'meses ya generados que sigan pendientes.',
         ),
       ),
     );

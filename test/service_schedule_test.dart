@@ -255,4 +255,69 @@ group('Service.nextChargeFrom', () {
       expect(s.dueDateFor(DateTime(2026, 3)), isNull);
     });
   });
+group('fecha de término (last_charge_month)', () {
+    final marzo = DateTime(2026, 3);
+
+    test('no cobra después del mes de término', () {
+      bool cobra(int month) => occursInMonth(
+            frequency: ServiceFrequency.mensual,
+            anchor: marzo,
+            month: DateTime(2026, month),
+            end: DateTime(2026, 6),
+          );
+      expect(cobra(5), isTrue);
+      expect(cobra(6), isTrue); // el mes de término todavía se cobra
+      expect(cobra(7), isFalse);
+    });
+
+    test('nextChargeMonth deja de proponer cobros tras el término', () {
+      expect(
+        nextChargeMonth(
+          frequency: ServiceFrequency.mensual,
+          anchor: marzo,
+          from: DateTime(2026, 6, 1),
+          end: DateTime(2026, 6),
+        ),
+        DateTime(2026, 6),
+      );
+      expect(
+        nextChargeMonth(
+          frequency: ServiceFrequency.mensual,
+          anchor: marzo,
+          from: DateTime(2026, 7, 1),
+          end: DateTime(2026, 6),
+        ),
+        isNull,
+      );
+    });
+
+    test('un anual cancelado antes de su próximo cobro ya no cobra', () {
+      expect(
+        nextChargeMonth(
+          frequency: ServiceFrequency.anual,
+          anchor: marzo,
+          from: DateTime(2026, 4, 1),
+          end: DateTime(2026, 12),
+        ),
+        isNull, // el siguiente sería marzo 2027, pasado el término
+      );
+    });
+
+    test('Service.occursIn y monthlyEquivalent usan el término', () {
+      final s = Service(
+        id: 's1',
+        userId: 'u1',
+        name: 'Cancelada',
+        estimatedAmount: 12000,
+        billingDay: 5,
+        frequency: ServiceFrequency.anual,
+        firstChargeMonth: marzo,
+        lastChargeMonth: DateTime(2026, 12),
+      );
+      expect(s.occursIn(marzo), isTrue);
+      expect(s.occursIn(DateTime(2027, 3)), isFalse);
+      expect(s.endedBefore(DateTime(2027, 1)), isTrue);
+      expect(s.monthlyEquivalent, 1000); // 12000 al año
+    });
+  });
 }

@@ -17,6 +17,7 @@ import '../../recurring/presentation/recurring_income_controller.dart';
 import '../../savings/presentation/dashboard_savings_section.dart';
 import '../../trends/presentation/dashboard_trends_section.dart';
 import '../../notifications/presentation/notifications_controller.dart';
+import '../../services/domain/service.dart';
 import '../../services/domain/service_payment.dart';
 import '../../services/presentation/payment_amount_sheet.dart';
 import '../../services/presentation/services_controller.dart';
@@ -380,7 +381,8 @@ class _UpcomingPaymentsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final paymentsAsync = ref.watch(monthlyPaymentsProvider);
     final servicesById = {
-      for (final s in ref.watch(servicesProvider).value ?? []) s.id: s,
+      for (final s in ref.watch(servicesProvider).value ?? const <Service>[])
+        s.id: s,
     };
 
     return Column(
@@ -435,8 +437,7 @@ class _UpcomingPaymentsSection extends ConsumerWidget {
                 for (final p in pending)
                   _PaymentTile(
                     payment: p,
-                    serviceName:
-                        servicesById[p.serviceId]?.name ?? 'Servicio',
+                    service: servicesById[p.serviceId],
                   ),
               ],
             );
@@ -448,10 +449,12 @@ class _UpcomingPaymentsSection extends ConsumerWidget {
 }
 
 class _PaymentTile extends ConsumerWidget {
-  const _PaymentTile({required this.payment, required this.serviceName});
+  const _PaymentTile({required this.payment, required this.service});
 
   final ServicePayment payment;
-  final String serviceName;
+  final Service? service;
+
+  String get serviceName => service?.name ?? 'Servicio';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -465,6 +468,7 @@ class _PaymentTile extends ConsumerWidget {
           context,
           payment: payment,
           serviceName: serviceName,
+          service: service,
         ),
         leading: CircleAvatar(
           backgroundColor: payment.isOverdue

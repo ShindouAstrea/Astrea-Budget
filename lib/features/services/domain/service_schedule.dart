@@ -34,7 +34,12 @@ bool occursInMonth({
   required ServiceFrequency frequency,
   required DateTime? anchor,
   required DateTime month,
+  DateTime? end,
 }) {
+  // Fecha de término: una suscripción cancelada que corre hasta cierto mes
+  // deja de generar pagos sola a partir del siguiente.
+  if (end != null && monthsBetween(end, month) > 0) return false;
+
   final period = periodMonthsOf(frequency);
   if (anchor == null) return period == 1;
 
@@ -50,18 +55,31 @@ DateTime? nextChargeMonth({
   required ServiceFrequency frequency,
   required DateTime? anchor,
   required DateTime from,
+  DateTime? end,
 }) {
   final month = DateTime(from.year, from.month);
   final period = periodMonthsOf(frequency);
-  if (anchor == null) return period == 1 ? month : null;
+  final DateTime? next;
+  if (anchor == null) {
+    next = period == 1 ? month : null;
+  } else {
+    final anchorMonth = DateTime(anchor.year, anchor.month);
+    final diff = monthsBetween(anchorMonth, month);
+    if (diff <= 0) {
+      next = anchorMonth;
+    } else if (period == 0) {
+      next = null; // único: su cobro ya pasó
+    } else {
+      final remainder = diff % period;
+      next = remainder == 0
+          ? month
+          : DateTime(month.year, month.month + (period - remainder));
+    }
+  }
 
-  final anchorMonth = DateTime(anchor.year, anchor.month);
-  final diff = monthsBetween(anchorMonth, month);
-  if (diff <= 0) return anchorMonth;
-  if (period == 0) return null; // único: su cobro ya pasó
-  final remainder = diff % period;
-  if (remainder == 0) return month;
-  return DateTime(month.year, month.month + (period - remainder));
+  if (next == null) return null;
+  if (end != null && monthsBetween(end, next) > 0) return null; // ya terminó
+  return next;
 }
 
 /// Día de vencimiento dentro de [month] para un `billing_day`, recortado al

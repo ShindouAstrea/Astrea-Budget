@@ -23,6 +23,9 @@ abstract class Service with _$Service {
     /// Mes (día 1) del primer cobro: ancla del ciclo para frecuencias no
     /// mensuales. Null en servicios creados antes de existir la columna.
     @JsonKey(name: 'first_charge_month') DateTime? firstChargeMonth,
+    /// Mes del último cobro: una suscripción cancelada que corre hasta cierta
+    /// fecha deja de generar pagos sola. Null = sin término.
+    @JsonKey(name: 'last_charge_month') DateTime? lastChargeMonth,
     /// Categoría de GASTO a la que se imputa el pago (distinta de [category],
     /// que sólo clasifica el servicio en esencial/suscripción). Sin ella, el
     /// gasto no cuenta en los presupuestos por categoría.
@@ -43,7 +46,23 @@ abstract class Service with _$Service {
         frequency: frequency,
         anchor: firstChargeMonth,
         month: month,
+        end: lastChargeMonth,
       );
+
+  /// Meses entre cobros expresados como costo mensual: un anual de $60.000
+  /// son $5.000 al mes. `unico` no es recurrente, así que no suma.
+  double get monthlyEquivalent {
+    final period = periodMonths;
+    if (period <= 0) return 0;
+    return estimatedAmount / period;
+  }
+
+  /// ¿Sigue vigente en [month]? (no terminó todavía)
+  bool endedBefore(DateTime month) =>
+      lastChargeMonth != null &&
+      monthsBetween(DateTime(lastChargeMonth!.year, lastChargeMonth!.month),
+              DateTime(month.year, month.month)) >
+          0;
 
   /// Primer mes con cobro desde [from] (incluido). Si el cobro de ese mes ya
   /// venció, salta al período siguiente. Null si ya no habrá más cobros.
@@ -53,6 +72,7 @@ abstract class Service with _$Service {
       frequency: frequency,
       anchor: firstChargeMonth,
       from: from,
+      end: lastChargeMonth,
     );
     if (candidate == null) return null;
     final due = dueDateFor(candidate);
@@ -61,6 +81,7 @@ abstract class Service with _$Service {
       frequency: frequency,
       anchor: firstChargeMonth,
       from: DateTime(candidate.year, candidate.month + 1),
+      end: lastChargeMonth,
     );
   }
 
