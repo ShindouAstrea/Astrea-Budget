@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
+import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/accounts/presentation/accounts_page.dart';
 import '../../features/budgets/presentation/budgets_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
@@ -37,11 +39,18 @@ final _rootKey = GlobalKey<NavigatorState>();
 /// que pasar por un provider) y, vía `ref.listen`, el estado de bloqueo.
 class _RouterRefresh extends ChangeNotifier {
   _RouterRefresh(Ref ref) {
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen(
-      (_) => notifyListeners(),
-    );
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      // El enlace de "recuperar contraseña" abre la app por deep link: el SDK
+      // canjea el código, deja una sesión y emite este evento. Sin la bandera,
+      // el guard mandaría al inicio sin pedir la contraseña nueva.
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        ref.read(passwordRecoveryProvider.notifier).start();
+      }
+      notifyListeners();
+    });
     ref.listen(appLockProvider, (_, _) => notifyListeners());
     ref.listen(onboardingSeenProvider, (_, _) => notifyListeners());
+    ref.listen(passwordRecoveryProvider, (_, _) => notifyListeners());
   }
 
   late final StreamSubscription<AuthState> _authSub;
@@ -73,6 +82,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           loc == AppRoute.register.path ||
           loc == AppRoute.forgotPassword.path;
       final onLockPage = loc == AppRoute.lock.path;
+      final onResetPage = loc == AppRoute.resetPassword.path;
 
       // 1. Sin sesión: sólo se permiten las páginas de auth.
       if (!loggedIn) return onAuthPage ? null : AppRoute.login.path;
@@ -80,17 +90,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // 2. Con sesión pero bloqueada: forzar pantalla de bloqueo.
       if (locked) return onLockPage ? null : AppRoute.lock.path;
 
-      // 3. Primera vez en el dispositivo: mostrar el tutorial de bienvenida.
+      // 3. Llegó por el enlace de recuperación: no se sale de esa pantalla
+      //    hasta definir la contraseña nueva (o cancelar, que cierra sesión).
+      if (ref.read(passwordRecoveryProvider)) {
+        return onResetPage ? null : AppRoute.resetPassword.path;
+      }
+      if (onResetPage) return AppRoute.dashboard.path;
+
+      // 4. Primera vez en el dispositivo: mostrar el tutorial de bienvenida.
       if (!ref.read(onboardingSeenProvider)) {
         return loc == AppRoute.onboarding.path
             ? null
             : AppRoute.onboarding.path;
       }
 
-      // 4. Invitado: puede entrar a registro para convertir su cuenta.
+      // 5. Invitado: puede entrar a registro para convertir su cuenta.
       if (isGuest && loc == AppRoute.register.path) return null;
 
-      // 5. Autenticado y desbloqueado: salir de auth/lock hacia el inicio.
+      // 6. Autenticado y desbloqueado: salir de auth/lock hacia el inicio.
       if (onAuthPage || onLockPage) return AppRoute.dashboard.path;
 
       return null;
@@ -110,6 +127,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.forgotPassword.path,
         name: AppRoute.forgotPassword.name,
         builder: (_, _) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: AppRoute.resetPassword.path,
+        name: AppRoute.resetPassword.name,
+        builder: (_, _) => const ResetPasswordPage(),
       ),
       GoRoute(
         path: AppRoute.lock.path,

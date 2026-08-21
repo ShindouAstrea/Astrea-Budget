@@ -49,6 +49,7 @@ class ServiceRepository {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    String? expenseCategoryId,
   }) async {
     final row = await _client
         .from('services')
@@ -62,6 +63,7 @@ class ServiceRepository {
           'billing_day': billingDay,
           'frequency': frequency.wire,
           'first_charge_month': _monthDate(firstChargeMonth ?? DateTime.now()),
+          'category_id': expenseCategoryId,
         })
         .select()
         .single();
@@ -81,6 +83,7 @@ class ServiceRepository {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    String? expenseCategoryId,
     required bool active,
   }) async {
     final row = await _client
@@ -94,6 +97,7 @@ class ServiceRepository {
           'frequency': frequency.wire,
           if (firstChargeMonth != null)
             'first_charge_month': _monthDate(firstChargeMonth),
+          'category_id': expenseCategoryId,
           'active': active,
         })
         .eq('id', id)

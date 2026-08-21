@@ -70,5 +70,21 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Deep links de Supabase (recuperar contraseña y confirmar correo).
+		     El esquema debe coincidir con lib/core/config/deep_links.dart y estar
+		     autorizado en Supabase → Authentication → URL Configuration. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>com.astrea.budget</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.astrea.budget</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>

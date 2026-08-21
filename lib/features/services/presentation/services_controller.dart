@@ -28,6 +28,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    String? expenseCategoryId,
   }) async {
     final householdId = await ref.read(activeHouseholdIdProvider.future);
     await _repo.createService(
@@ -39,6 +40,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
       billingDay: billingDay,
       frequency: frequency,
       firstChargeMonth: firstChargeMonth,
+      expenseCategoryId: expenseCategoryId,
     );
     ref.invalidateSelf();
     await future;
@@ -53,6 +55,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     int? billingDay,
     required ServiceFrequency frequency,
     DateTime? firstChargeMonth,
+    String? expenseCategoryId,
     required bool active,
   }) async {
     await _repo.updateService(
@@ -64,6 +67,7 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
       billingDay: billingDay,
       frequency: frequency,
       firstChargeMonth: firstChargeMonth,
+      expenseCategoryId: expenseCategoryId,
       active: active,
     );
     ref.invalidateSelf();
@@ -121,21 +125,27 @@ class PaymentActions {
   PaymentActions(this.ref);
   final Ref ref;
 
-  /// [amount] permite pagar por un monto distinto al estimado del servicio.
+  /// [amount] permite pagar por un monto distinto al estimado del servicio y
+  /// [paidDate] registrar el gasto en la fecha real del pago (por defecto hoy).
+  /// La categoría sale del servicio, para que el gasto cuente en el presupuesto
+  /// de esa categoría.
   Future<void> markAsPaid(
     ServicePayment payment, {
     String? categoryId,
     int? amount,
+    DateTime? paidDate,
   }) async {
     final householdId = await ref.read(activeHouseholdIdProvider.future);
     final account = await ref.read(activeAccountProvider.future);
+    final service = _service(payment.serviceId);
     await ref.read(serviceRepositoryProvider).markAsPaid(
           householdId: householdId,
           payment: payment,
-          categoryId: categoryId,
+          categoryId: categoryId ?? service?.expenseCategoryId,
           accountId: account?.id,
           amount: amount,
-          serviceName: _serviceName(payment.serviceId),
+          paidDate: paidDate,
+          serviceName: service?.name,
         );
     _refresh(payment.serviceId);
   }
@@ -170,13 +180,13 @@ class PaymentActions {
     _refresh(serviceId);
   }
 
-  /// Nombre del servicio para describir el gasto en el historial ("Pago Netflix"
-  /// en vez de "Pago de servicio"). Null si la lista aún no está cargada.
-  String? _serviceName(String serviceId) {
+  /// Servicio al que pertenece el pago (para su nombre y su categoría de
+  /// gasto). Null si la lista aún no está cargada.
+  Service? _service(String serviceId) {
     final services = ref.read(servicesProvider).value;
     if (services == null) return null;
     for (final s in services) {
-      if (s.id == serviceId) return s.name;
+      if (s.id == serviceId) return s;
     }
     return null;
   }

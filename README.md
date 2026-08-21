@@ -67,6 +67,14 @@ supabase/
    [`supabase/migrations/`](supabase/migrations/) en orden (cada uno indica si
    hay bloques que deben ejecutarse por separado). `schema.sql` ya los incluye
    para instalaciones nuevas.
+7. **Correos que vuelven a la app** (recuperar contraseña, confirmar cuenta):
+   en **Authentication → URL Configuration → Redirect URLs** agrega
+   `com.astrea.budget://*`. Sin esa autorización Supabase ignora el
+   `redirectTo` y usa el *Site URL* del proyecto —`http://localhost:3000` por
+   defecto—, que es lo que hace que el enlace del correo no lleve a ninguna
+   parte desde el teléfono. El esquema está definido en
+   [`lib/core/config/deep_links.dart`](lib/core/config/deep_links.dart) y
+   declarado en `AndroidManifest.xml` e `Info.plist`.
 
 ### Datos de ejemplo (seed)
 

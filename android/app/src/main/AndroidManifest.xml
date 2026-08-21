@@ -29,6 +29,18 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep links de Supabase (recuperar contraseña y confirmar
+                 correo). Sin esto, el enlace del correo abre el Site URL del
+                 proyecto (localhost) en vez de la app.
+                 El esquema debe coincidir con lib/core/config/deep_links.dart
+                 y estar autorizado en Supabase → Authentication → URL
+                 Configuration → Redirect URLs. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="com.astrea.budget"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

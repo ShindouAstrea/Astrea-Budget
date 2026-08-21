@@ -5,6 +5,8 @@ enum AppRoute {
   login('/login', 'login'),
   register('/register', 'register'),
   forgotPassword('/forgot-password', 'forgot-password'),
+  /// Destino del enlace de recuperación que llega por correo (deep link).
+  resetPassword('/reset-password', 'reset-password'),
   lock('/lock', 'lock'),
 
   // Pestañas del shell.

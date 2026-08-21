@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/config/deep_links.dart';
 import '../../../core/config/supabase_provider.dart';
 
 /// Encapsula todas las llamadas a Supabase Auth.
@@ -20,6 +22,11 @@ class AuthRepository {
     await _auth.signInWithPassword(email: email.trim(), password: password);
   }
 
+  /// En móvil los correos deben volver a la app por deep link; en web/escritorio
+  /// no hay esquema propio que registrar, así que se deja el Site URL del
+  /// proyecto.
+  String? _redirect(String link) => kIsWeb ? null : link;
+
   Future<void> signUp({
     required String email,
     required String password,
@@ -29,6 +36,7 @@ class AuthRepository {
       email: email.trim(),
       password: password,
       data: {'name': name.trim()},
+      emailRedirectTo: _redirect(kEmailConfirmRedirect),
     );
   }
 
@@ -54,11 +62,24 @@ class AuthRepository {
         password: password,
         data: {'name': name.trim()},
       ),
+      emailRedirectTo: _redirect(kEmailConfirmRedirect),
     );
   }
 
+  /// Envía el correo de recuperación. `redirectTo` es lo que hace que el enlace
+  /// abra la app (pantalla de nueva contraseña) en vez del Site URL del
+  /// proyecto, que por defecto es localhost.
   Future<void> sendPasswordReset(String email) async {
-    await _auth.resetPasswordForEmail(email.trim());
+    await _auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: _redirect(kPasswordResetRedirect),
+    );
+  }
+
+  /// Define la contraseña nueva. Sólo funciona con la sesión temporal que crea
+  /// el enlace de recuperación (o con una sesión normal ya iniciada).
+  Future<void> updatePassword(String password) async {
+    await _auth.updateUser(UserAttributes(password: password));
   }
 
   Future<void> signOut() async => _auth.signOut();

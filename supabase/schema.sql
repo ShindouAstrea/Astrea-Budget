@@ -153,10 +153,14 @@ create table public.services (
   -- cobro. Un servicio semestral anclado en marzo cobra en marzo y septiembre;
   -- los demás meses no generan pago (ver service_schedule.dart).
   first_charge_month date,
+  -- Categoría de gasto a la que se imputa el pago del servicio (para que
+  -- cuente en los presupuestos por categoría y en el gráfico del dashboard).
+  category_id      uuid references public.categories (id) on delete set null,
   active           boolean not null default true,
   created_at       timestamptz not null default now()
 );
 create index services_household_idx on public.services (household_id);
+create index services_category_idx  on public.services (category_id);
 
 -- ---------------------------------------------------------------------
 -- 7. Transacciones (movimientos)

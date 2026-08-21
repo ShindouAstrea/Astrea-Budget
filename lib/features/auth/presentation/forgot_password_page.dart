@@ -62,6 +62,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                       'Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ábrelo en este mismo dispositivo: la app se abrirá en la '
+                      'pantalla para escribir la contraseña nueva.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _email,

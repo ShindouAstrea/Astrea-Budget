@@ -10,6 +10,7 @@ import '../../accounts/presentation/accounts_controller.dart';
 import '../../categories/presentation/categories_controller.dart';
 import '../../households/presentation/household_switcher.dart';
 import '../domain/recurring_income.dart';
+import '../domain/recurring_schedule.dart';
 import 'recurring_income_controller.dart';
 
 class RecurringIncomesPage extends ConsumerWidget {
@@ -67,31 +68,120 @@ class RecurringIncomesPage extends ConsumerWidget {
   }
 }
 
-class _IncomeCard extends StatelessWidget {
+/// Tarjeta de una plantilla. Muestra en qué va la generación automática —
+/// último registro y próxima fecha— y deja registrar a mano lo atrasado, para
+/// que "no se registró solo" deje de ser un misterio.
+class _IncomeCard extends ConsumerStatefulWidget {
   const _IncomeCard({required this.income, required this.onTap});
   final RecurringIncome income;
   final VoidCallback onTap;
 
   @override
+  ConsumerState<_IncomeCard> createState() => _IncomeCardState();
+}
+
+class _IncomeCardState extends ConsumerState<_IncomeCard> {
+  bool _running = false;
+
+  RecurringIncome get _income => widget.income;
+
+  Future<void> _generateNow() async {
+    setState(() => _running = true);
+    try {
+      final created =
+          await ref.read(recurringIncomeActionsProvider).generateNow(_income);
+      if (!mounted) return;
+      context.showSuccess(
+        created == 0
+            ? 'No había nada pendiente'
+            : 'Se registró el ingreso ($created ${created == 1 ? 'mes' : 'meses'})',
+      );
+    } catch (_) {
+      if (mounted) context.showError('No se pudo registrar el ingreso');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final pending = _income.active
+        ? pendingOccurrences(
+            dayOfMonth: _income.dayOfMonth,
+            lastGenerated: _income.lastGenerated,
+            today: today,
+          )
+        : const <DateTime>[];
+    final next = nextOccurrence(
+      dayOfMonth: _income.dayOfMonth,
+      lastGenerated: _income.lastGenerated,
+      today: today,
+    );
+
+    final String estado;
+    if (!_income.active) {
+      estado = 'Pausado: no se registra solo';
+    } else if (pending.isNotEmpty) {
+      estado = 'Pendiente desde el ${Formatters.dayMonthYear(pending.first)}';
+    } else if (_income.lastGenerated != null) {
+      estado = 'Último: ${Formatters.dayMonthYear(_income.lastGenerated!)} · '
+          'próximo: ${Formatters.dayMonthYear(next)}';
+    } else {
+      estado = 'Próximo: ${Formatters.dayMonthYear(next)}';
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: scheme.primaryContainer,
-          child: Icon(
-            income.active ? Icons.event_repeat : Icons.pause_circle_outline,
-            color: scheme.onPrimaryContainer,
+      child: Column(
+        children: [
+          ListTile(
+            onTap: widget.onTap,
+            leading: CircleAvatar(
+              backgroundColor: scheme.primaryContainer,
+              child: Icon(
+                _income.active
+                    ? Icons.event_repeat
+                    : Icons.pause_circle_outline,
+                color: scheme.onPrimaryContainer,
+              ),
+            ),
+            title: Text(_income.description),
+            isThreeLine: true,
+            subtitle: Text(
+              'Día ${_income.dayOfMonth} · '
+              '${Formatters.currency(_income.amount)}\n$estado',
+            ),
+            trailing: const Icon(Icons.chevron_right),
           ),
-        ),
-        title: Text(income.description),
-        subtitle: Text(
-          'Día ${income.dayOfMonth} · ${Formatters.currency(income.amount)}'
-          '${income.active ? '' : ' · Pausado'}',
-        ),
-        trailing: const Icon(Icons.chevron_right),
+          if (pending.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_running)
+                    const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                  else
+                    FilledButton.tonalIcon(
+                      onPressed: _generateNow,
+                      icon: const Icon(Icons.playlist_add_check),
+                      label: Text(
+                        pending.length == 1
+                            ? 'Registrar ahora'
+                            : 'Registrar ${pending.length} meses',
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

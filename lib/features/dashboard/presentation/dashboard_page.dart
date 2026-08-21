@@ -9,6 +9,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/month_selector.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../accounts/presentation/accounts_controller.dart';
 import '../../budgets/presentation/dashboard_budgets_section.dart';
 import '../../households/presentation/household_switcher.dart';
 import '../../projection/presentation/dashboard_projection_section.dart';
@@ -38,10 +39,22 @@ class DashboardPage extends ConsumerWidget {
     });
 
     // Genera los ingresos recurrentes vencidos al abrir; si registró alguno,
-    // refresca los movimientos del mes (cascada al resumen/proyección).
+    // refresca los movimientos del mes (cascada al resumen/proyección) y lo
+    // avisa. Si falla, también se avisa: antes el error quedaba mudo y el
+    // ingreso "nunca se registraba" sin explicación.
     ref.listen(recurringIncomeGenerationProvider, (_, next) {
-      if (next.value == true) {
+      final created = next.value ?? 0;
+      if (created > 0) {
         ref.invalidate(monthlyTransactionsProvider);
+        ref.invalidate(accountBalancesProvider);
+        context.showSuccess(
+          created == 1
+              ? 'Se registró 1 ingreso recurrente'
+              : 'Se registraron $created ingresos recurrentes',
+        );
+      }
+      if (next.hasError) {
+        context.showError('No se pudieron registrar los ingresos recurrentes');
       }
     });
 

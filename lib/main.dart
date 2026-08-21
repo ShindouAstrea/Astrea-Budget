@@ -35,7 +35,9 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
+    // `anonKey` quedó deprecado: Supabase renombró la llave pública a
+    // "publishable key". La anon key de siempre sigue sirviendo tal cual.
+    publishableKey: Env.supabasePublishableKey,
   );
 
   runApp(

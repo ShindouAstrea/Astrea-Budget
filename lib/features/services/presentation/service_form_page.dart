@@ -8,8 +8,56 @@ import '../../../core/utils/validators.dart';
 import '../../../core/widgets/month_selector.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../shared/enums.dart';
+import '../../categories/domain/category.dart';
+import '../../categories/presentation/categories_controller.dart';
 import '../domain/service.dart';
 import 'services_controller.dart';
+
+/// Selector de la categoría de GASTO del servicio: la que llevará la
+/// transacción al marcar el pago. Se alimenta de las categorías de gasto del
+/// household; "Sin categoría" sigue siendo válido.
+class _ExpenseCategoryField extends ConsumerWidget {
+  const _ExpenseCategoryField({required this.value, required this.onChanged});
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(categoriesProvider).value ?? const <Category>[];
+    final expense = [for (final c in categories) if (!c.type.isIncome) c];
+    // Si la categoría guardada ya no existe, el Dropdown fallaría: cae a null.
+    final selected =
+        expense.any((c) => c.id == value) ? value : null;
+
+    return DropdownButtonFormField<String?>(
+      initialValue: selected,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Categoría de gasto',
+        helperText: 'Con categoría, el pago cuenta en su presupuesto y en el '
+            'gráfico del mes.',
+        helperMaxLines: 3,
+        prefixIcon: Icon(Icons.pie_chart_outline),
+      ),
+      items: [
+        const DropdownMenuItem(value: null, child: Text('Sin categoría')),
+        for (final c in expense)
+          DropdownMenuItem(
+            value: c.id,
+            child: Row(
+              children: [
+                Icon(c.iconData, size: 18, color: c.colorValue),
+                const SizedBox(width: 8),
+                Flexible(child: Text(c.name, overflow: TextOverflow.ellipsis)),
+              ],
+            ),
+          ),
+      ],
+      onChanged: onChanged,
+    );
+  }
+}
 
 /// Formulario de creación/edición de servicio.
 class ServiceFormPage extends ConsumerStatefulWidget {
@@ -30,6 +78,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   late ServiceFrequency _frequency;
   /// Mes del primer cobro: ancla del ciclo para frecuencias no mensuales.
   late DateTime _firstChargeMonth;
+  /// Categoría de gasto a la que se imputa el pago (null = sin categoría).
+  late String? _expenseCategoryId;
   late bool _active;
   bool _saving = false;
 
@@ -49,6 +99,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     _frequency = s?.frequency ?? ServiceFrequency.mensual;
     final now = DateTime.now();
     _firstChargeMonth = s?.firstChargeMonth ?? DateTime(now.year, now.month);
+    _expenseCategoryId = s?.expenseCategoryId;
     _active = s?.active ?? true;
   }
 
@@ -83,6 +134,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
           billingDay: billingDay,
           frequency: _frequency,
           firstChargeMonth: _firstChargeMonth,
+          expenseCategoryId: _expenseCategoryId,
           active: _active,
         );
       } else {
@@ -94,6 +146,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
           billingDay: billingDay,
           frequency: _frequency,
           firstChargeMonth: _firstChargeMonth,
+          expenseCategoryId: _expenseCategoryId,
         );
       }
       // Refresca los pagos del mes (pueden generarse nuevos).
@@ -217,6 +270,13 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               ],
               selected: {_category},
               onSelectionChanged: (s) => setState(() => _category = s.first),
+            ),
+            const SizedBox(height: 16),
+            // Categoría de gasto: sin ella, el pago no cuenta en el presupuesto
+            // por categoría ni en el gráfico del dashboard.
+            _ExpenseCategoryField(
+              value: _expenseCategoryId,
+              onChanged: (v) => setState(() => _expenseCategoryId = v),
             ),
             const SizedBox(height: 16),
             // Para servicios fijos: día de cobro + frecuencia.

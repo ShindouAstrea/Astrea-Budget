@@ -8,6 +8,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/brand_illustration.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../categories/presentation/categories_controller.dart';
 import '../data/service_repository.dart';
 import '../domain/service.dart';
 import '../domain/service_payment.dart';
@@ -92,19 +93,26 @@ class ServiceDetailPage extends ConsumerWidget {
   }
 }
 
-class _InfoCard extends StatelessWidget {
+class _InfoCard extends ConsumerWidget {
   const _InfoCard({required this.service});
   final Service service;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(categoriesProvider).value ?? const [];
+    String categoryName = 'Sin categoría';
+    for (final c in categories) {
+      if (c.id == service.expenseCategoryId) categoryName = c.name;
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             _row(context, 'Tipo', service.type.label),
-            _row(context, 'Categoría', service.category.label),
+            _row(context, 'Clasificación', service.category.label),
+            _row(context, 'Categoría de gasto', categoryName),
             _row(context, 'Monto estimado',
                 Formatters.currency(service.estimatedAmount)),
             if (service.isFixed && service.billingDay != null)

@@ -21,13 +21,18 @@ class Env {
 
   static String get supabaseUrl => dotenv.maybeGet('SUPABASE_URL') ?? '';
 
-  static String get supabaseAnonKey =>
-      dotenv.maybeGet('SUPABASE_ANON_KEY') ?? '';
+  /// Llave pública del proyecto. Supabase la renombró de "anon key" a
+  /// "publishable key"; se aceptan las dos variables para no romper los `.env`
+  /// existentes. Es pública por diseño: la protección real es la RLS.
+  static String get supabasePublishableKey =>
+      dotenv.maybeGet('SUPABASE_PUBLISHABLE_KEY') ??
+      dotenv.maybeGet('SUPABASE_ANON_KEY') ??
+      '';
 
   /// Locale y moneda por defecto (Chile).
   static const String defaultLocale = 'es_CL';
   static const String defaultCurrency = 'CLP';
 
   static bool get isConfigured =>
-      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+      supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;
 }

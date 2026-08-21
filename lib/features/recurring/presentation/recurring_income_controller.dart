@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../accounts/presentation/accounts_controller.dart';
 import '../../households/presentation/household_controller.dart';
+import '../../transactions/presentation/transactions_controller.dart';
 import '../data/recurring_income_repository.dart';
 import '../domain/recurring_income.dart';
 
@@ -12,10 +14,13 @@ final recurringIncomesProvider =
 });
 
 /// Dispara la generación de ingresos recurrentes vencidos del household activo.
-/// Lo observa el dashboard al cargar; devuelve true si registró alguno.
-final recurringIncomeGenerationProvider = FutureProvider<bool>((ref) async {
+/// Lo observa el dashboard al cargar; devuelve cuántos registró.
+final recurringIncomeGenerationProvider = FutureProvider<int>((ref) async {
   final householdId = await ref.watch(activeHouseholdIdProvider.future);
-  return ref.watch(recurringIncomeRepositoryProvider).generateDue(householdId);
+  final created =
+      await ref.read(recurringIncomeRepositoryProvider).generateDue(householdId);
+  if (created > 0) ref.invalidate(recurringIncomesProvider);
+  return created;
 });
 
 /// Acciones CRUD sobre ingresos recurrentes.
@@ -50,6 +55,22 @@ class RecurringIncomeActions {
   Future<void> remove(String id) async {
     await ref.read(recurringIncomeRepositoryProvider).delete(id);
     ref.invalidate(recurringIncomesProvider);
+  }
+
+  /// Registra a mano lo que esté pendiente de una plantilla (botón "Registrar
+  /// ahora"). Devuelve cuántos movimientos creó; los errores se propagan para
+  /// que la pantalla los muestre en vez de fallar en silencio.
+  Future<int> generateNow(RecurringIncome income) async {
+    final householdId = await ref.read(activeHouseholdIdProvider.future);
+    final created = await ref
+        .read(recurringIncomeRepositoryProvider)
+        .generateFor(householdId, income);
+    if (created > 0) {
+      ref.invalidate(recurringIncomesProvider);
+      ref.invalidate(monthlyTransactionsProvider);
+      ref.invalidate(accountBalancesProvider);
+    }
+    return created;
   }
 }
 

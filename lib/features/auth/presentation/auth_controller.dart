@@ -36,6 +36,10 @@ class AuthController extends AsyncNotifier<void> {
   Future<bool> sendPasswordReset(String email) =>
       _run(() => ref.read(authRepositoryProvider).sendPasswordReset(email));
 
+  /// Define la contraseña nueva tras llegar por el enlace de recuperación.
+  Future<bool> updatePassword(String password) =>
+      _run(() => ref.read(authRepositoryProvider).updatePassword(password));
+
   Future<bool> signOut() =>
       _run(() => ref.read(authRepositoryProvider).signOut());
 
@@ -101,3 +105,24 @@ class AuthController extends AsyncNotifier<void> {
 
 final authControllerProvider =
     AsyncNotifierProvider<AuthController, void>(AuthController.new);
+
+/// ¿El usuario llegó por un enlace de recuperación y aún no define su nueva
+/// contraseña?
+///
+/// La sesión que crea ese enlace es una sesión normal para Supabase, así que
+/// sin esta bandera el guard del router lo mandaría directo al inicio y nunca
+/// vería la pantalla para cambiarla. La levanta el router al recibir el evento
+/// `passwordRecovery` y la baja la pantalla al guardar (o al cancelar).
+class PasswordRecoveryNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void start() => state = true;
+
+  void finish() => state = false;
+}
+
+final passwordRecoveryProvider =
+    NotifierProvider<PasswordRecoveryNotifier, bool>(
+  PasswordRecoveryNotifier.new,
+);

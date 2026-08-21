@@ -24,6 +24,7 @@ _Service _$ServiceFromJson(Map<String, dynamic> json) => _Service(
   firstChargeMonth: json['first_charge_month'] == null
       ? null
       : DateTime.parse(json['first_charge_month'] as String),
+  expenseCategoryId: json['category_id'] as String?,
   active: json['active'] as bool? ?? true,
 );
 
@@ -37,6 +38,7 @@ Map<String, dynamic> _$ServiceToJson(_Service instance) => <String, dynamic>{
   'billing_day': instance.billingDay,
   'frequency': _$ServiceFrequencyEnumMap[instance.frequency]!,
   'first_charge_month': instance.firstChargeMonth?.toIso8601String(),
+  'category_id': instance.expenseCategoryId,
   'active': instance.active,
 };
 

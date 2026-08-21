@@ -17,7 +17,10 @@ mixin _$Service {
 
  String get id;@JsonKey(name: 'user_id') String get userId; String get name; ServiceType get type; ServiceCategory get category;@JsonKey(name: 'estimated_amount') double get estimatedAmount;@JsonKey(name: 'billing_day') int? get billingDay; ServiceFrequency get frequency;/// Mes (día 1) del primer cobro: ancla del ciclo para frecuencias no
 /// mensuales. Null en servicios creados antes de existir la columna.
-@JsonKey(name: 'first_charge_month') DateTime? get firstChargeMonth; bool get active;
+@JsonKey(name: 'first_charge_month') DateTime? get firstChargeMonth;/// Categoría de GASTO a la que se imputa el pago (distinta de [category],
+/// que sólo clasifica el servicio en esencial/suscripción). Sin ella, el
+/// gasto no cuenta en los presupuestos por categoría.
+@JsonKey(name: 'category_id') String? get expenseCategoryId; bool get active;
 /// Create a copy of Service
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,16 +33,16 @@ $ServiceCopyWith<Service> get copyWith => _$ServiceCopyWithImpl<Service>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Service&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.category, category) || other.category == category)&&(identical(other.estimatedAmount, estimatedAmount) || other.estimatedAmount == estimatedAmount)&&(identical(other.billingDay, billingDay) || other.billingDay == billingDay)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.firstChargeMonth, firstChargeMonth) || other.firstChargeMonth == firstChargeMonth)&&(identical(other.active, active) || other.active == active));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Service&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.category, category) || other.category == category)&&(identical(other.estimatedAmount, estimatedAmount) || other.estimatedAmount == estimatedAmount)&&(identical(other.billingDay, billingDay) || other.billingDay == billingDay)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.firstChargeMonth, firstChargeMonth) || other.firstChargeMonth == firstChargeMonth)&&(identical(other.expenseCategoryId, expenseCategoryId) || other.expenseCategoryId == expenseCategoryId)&&(identical(other.active, active) || other.active == active));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,name,type,category,estimatedAmount,billingDay,frequency,firstChargeMonth,active);
+int get hashCode => Object.hash(runtimeType,id,userId,name,type,category,estimatedAmount,billingDay,frequency,firstChargeMonth,expenseCategoryId,active);
 
 @override
 String toString() {
-  return 'Service(id: $id, userId: $userId, name: $name, type: $type, category: $category, estimatedAmount: $estimatedAmount, billingDay: $billingDay, frequency: $frequency, firstChargeMonth: $firstChargeMonth, active: $active)';
+  return 'Service(id: $id, userId: $userId, name: $name, type: $type, category: $category, estimatedAmount: $estimatedAmount, billingDay: $billingDay, frequency: $frequency, firstChargeMonth: $firstChargeMonth, expenseCategoryId: $expenseCategoryId, active: $active)';
 }
 
 
@@ -50,7 +53,7 @@ abstract mixin class $ServiceCopyWith<$Res>  {
   factory $ServiceCopyWith(Service value, $Res Function(Service) _then) = _$ServiceCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'user_id') String userId, String name, ServiceType type, ServiceCategory category,@JsonKey(name: 'estimated_amount') double estimatedAmount,@JsonKey(name: 'billing_day') int? billingDay, ServiceFrequency frequency,@JsonKey(name: 'first_charge_month') DateTime? firstChargeMonth, bool active
+ String id,@JsonKey(name: 'user_id') String userId, String name, ServiceType type, ServiceCategory category,@JsonKey(name: 'estimated_amount') double estimatedAmount,@JsonKey(name: 'billing_day') int? billingDay, ServiceFrequency frequency,@JsonKey(name: 'first_charge_month') DateTime? firstChargeMonth,@JsonKey(name: 'category_id') String? expenseCategoryId, bool active
 });
 
 
@@ -67,7 +70,7 @@ class _$ServiceCopyWithImpl<$Res>
 
 /// Create a copy of Service
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? category = null,Object? estimatedAmount = null,Object? billingDay = freezed,Object? frequency = null,Object? firstChargeMonth = freezed,Object? active = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? category = null,Object? estimatedAmount = null,Object? billingDay = freezed,Object? frequency = null,Object? firstChargeMonth = freezed,Object? expenseCategoryId = freezed,Object? active = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -78,7 +81,8 @@ as ServiceCategory,estimatedAmount: null == estimatedAmount ? _self.estimatedAmo
 as double,billingDay: freezed == billingDay ? _self.billingDay : billingDay // ignore: cast_nullable_to_non_nullable
 as int?,frequency: null == frequency ? _self.frequency : frequency // ignore: cast_nullable_to_non_nullable
 as ServiceFrequency,firstChargeMonth: freezed == firstChargeMonth ? _self.firstChargeMonth : firstChargeMonth // ignore: cast_nullable_to_non_nullable
-as DateTime?,active: null == active ? _self.active : active // ignore: cast_nullable_to_non_nullable
+as DateTime?,expenseCategoryId: freezed == expenseCategoryId ? _self.expenseCategoryId : expenseCategoryId // ignore: cast_nullable_to_non_nullable
+as String?,active: null == active ? _self.active : active // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -164,10 +168,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId,  String name,  ServiceType type,  ServiceCategory category, @JsonKey(name: 'estimated_amount')  double estimatedAmount, @JsonKey(name: 'billing_day')  int? billingDay,  ServiceFrequency frequency, @JsonKey(name: 'first_charge_month')  DateTime? firstChargeMonth,  bool active)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId,  String name,  ServiceType type,  ServiceCategory category, @JsonKey(name: 'estimated_amount')  double estimatedAmount, @JsonKey(name: 'billing_day')  int? billingDay,  ServiceFrequency frequency, @JsonKey(name: 'first_charge_month')  DateTime? firstChargeMonth, @JsonKey(name: 'category_id')  String? expenseCategoryId,  bool active)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Service() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that.estimatedAmount,_that.billingDay,_that.frequency,_that.firstChargeMonth,_that.active);case _:
+return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that.estimatedAmount,_that.billingDay,_that.frequency,_that.firstChargeMonth,_that.expenseCategoryId,_that.active);case _:
   return orElse();
 
 }
@@ -185,10 +189,10 @@ return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId,  String name,  ServiceType type,  ServiceCategory category, @JsonKey(name: 'estimated_amount')  double estimatedAmount, @JsonKey(name: 'billing_day')  int? billingDay,  ServiceFrequency frequency, @JsonKey(name: 'first_charge_month')  DateTime? firstChargeMonth,  bool active)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId,  String name,  ServiceType type,  ServiceCategory category, @JsonKey(name: 'estimated_amount')  double estimatedAmount, @JsonKey(name: 'billing_day')  int? billingDay,  ServiceFrequency frequency, @JsonKey(name: 'first_charge_month')  DateTime? firstChargeMonth, @JsonKey(name: 'category_id')  String? expenseCategoryId,  bool active)  $default,) {final _that = this;
 switch (_that) {
 case _Service():
-return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that.estimatedAmount,_that.billingDay,_that.frequency,_that.firstChargeMonth,_that.active);case _:
+return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that.estimatedAmount,_that.billingDay,_that.frequency,_that.firstChargeMonth,_that.expenseCategoryId,_that.active);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +209,10 @@ return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'user_id')  String userId,  String name,  ServiceType type,  ServiceCategory category, @JsonKey(name: 'estimated_amount')  double estimatedAmount, @JsonKey(name: 'billing_day')  int? billingDay,  ServiceFrequency frequency, @JsonKey(name: 'first_charge_month')  DateTime? firstChargeMonth,  bool active)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'user_id')  String userId,  String name,  ServiceType type,  ServiceCategory category, @JsonKey(name: 'estimated_amount')  double estimatedAmount, @JsonKey(name: 'billing_day')  int? billingDay,  ServiceFrequency frequency, @JsonKey(name: 'first_charge_month')  DateTime? firstChargeMonth, @JsonKey(name: 'category_id')  String? expenseCategoryId,  bool active)?  $default,) {final _that = this;
 switch (_that) {
 case _Service() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that.estimatedAmount,_that.billingDay,_that.frequency,_that.firstChargeMonth,_that.active);case _:
+return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that.estimatedAmount,_that.billingDay,_that.frequency,_that.firstChargeMonth,_that.expenseCategoryId,_that.active);case _:
   return null;
 
 }
@@ -220,7 +224,7 @@ return $default(_that.id,_that.userId,_that.name,_that.type,_that.category,_that
 @JsonSerializable()
 
 class _Service extends Service {
-  const _Service({required this.id, @JsonKey(name: 'user_id') required this.userId, required this.name, this.type = ServiceType.fijo, this.category = ServiceCategory.esencial, @JsonKey(name: 'estimated_amount') this.estimatedAmount = 0, @JsonKey(name: 'billing_day') this.billingDay, this.frequency = ServiceFrequency.mensual, @JsonKey(name: 'first_charge_month') this.firstChargeMonth, this.active = true}): super._();
+  const _Service({required this.id, @JsonKey(name: 'user_id') required this.userId, required this.name, this.type = ServiceType.fijo, this.category = ServiceCategory.esencial, @JsonKey(name: 'estimated_amount') this.estimatedAmount = 0, @JsonKey(name: 'billing_day') this.billingDay, this.frequency = ServiceFrequency.mensual, @JsonKey(name: 'first_charge_month') this.firstChargeMonth, @JsonKey(name: 'category_id') this.expenseCategoryId, this.active = true}): super._();
   factory _Service.fromJson(Map<String, dynamic> json) => _$ServiceFromJson(json);
 
 @override final  String id;
@@ -234,6 +238,10 @@ class _Service extends Service {
 /// Mes (día 1) del primer cobro: ancla del ciclo para frecuencias no
 /// mensuales. Null en servicios creados antes de existir la columna.
 @override@JsonKey(name: 'first_charge_month') final  DateTime? firstChargeMonth;
+/// Categoría de GASTO a la que se imputa el pago (distinta de [category],
+/// que sólo clasifica el servicio en esencial/suscripción). Sin ella, el
+/// gasto no cuenta en los presupuestos por categoría.
+@override@JsonKey(name: 'category_id') final  String? expenseCategoryId;
 @override@JsonKey() final  bool active;
 
 /// Create a copy of Service
@@ -249,16 +257,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Service&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.category, category) || other.category == category)&&(identical(other.estimatedAmount, estimatedAmount) || other.estimatedAmount == estimatedAmount)&&(identical(other.billingDay, billingDay) || other.billingDay == billingDay)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.firstChargeMonth, firstChargeMonth) || other.firstChargeMonth == firstChargeMonth)&&(identical(other.active, active) || other.active == active));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Service&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.category, category) || other.category == category)&&(identical(other.estimatedAmount, estimatedAmount) || other.estimatedAmount == estimatedAmount)&&(identical(other.billingDay, billingDay) || other.billingDay == billingDay)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.firstChargeMonth, firstChargeMonth) || other.firstChargeMonth == firstChargeMonth)&&(identical(other.expenseCategoryId, expenseCategoryId) || other.expenseCategoryId == expenseCategoryId)&&(identical(other.active, active) || other.active == active));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,name,type,category,estimatedAmount,billingDay,frequency,firstChargeMonth,active);
+int get hashCode => Object.hash(runtimeType,id,userId,name,type,category,estimatedAmount,billingDay,frequency,firstChargeMonth,expenseCategoryId,active);
 
 @override
 String toString() {
-  return 'Service(id: $id, userId: $userId, name: $name, type: $type, category: $category, estimatedAmount: $estimatedAmount, billingDay: $billingDay, frequency: $frequency, firstChargeMonth: $firstChargeMonth, active: $active)';
+  return 'Service(id: $id, userId: $userId, name: $name, type: $type, category: $category, estimatedAmount: $estimatedAmount, billingDay: $billingDay, frequency: $frequency, firstChargeMonth: $firstChargeMonth, expenseCategoryId: $expenseCategoryId, active: $active)';
 }
 
 
@@ -269,7 +277,7 @@ abstract mixin class _$ServiceCopyWith<$Res> implements $ServiceCopyWith<$Res> {
   factory _$ServiceCopyWith(_Service value, $Res Function(_Service) _then) = __$ServiceCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'user_id') String userId, String name, ServiceType type, ServiceCategory category,@JsonKey(name: 'estimated_amount') double estimatedAmount,@JsonKey(name: 'billing_day') int? billingDay, ServiceFrequency frequency,@JsonKey(name: 'first_charge_month') DateTime? firstChargeMonth, bool active
+ String id,@JsonKey(name: 'user_id') String userId, String name, ServiceType type, ServiceCategory category,@JsonKey(name: 'estimated_amount') double estimatedAmount,@JsonKey(name: 'billing_day') int? billingDay, ServiceFrequency frequency,@JsonKey(name: 'first_charge_month') DateTime? firstChargeMonth,@JsonKey(name: 'category_id') String? expenseCategoryId, bool active
 });
 
 
@@ -286,7 +294,7 @@ class __$ServiceCopyWithImpl<$Res>
 
 /// Create a copy of Service
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? category = null,Object? estimatedAmount = null,Object? billingDay = freezed,Object? frequency = null,Object? firstChargeMonth = freezed,Object? active = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? category = null,Object? estimatedAmount = null,Object? billingDay = freezed,Object? frequency = null,Object? firstChargeMonth = freezed,Object? expenseCategoryId = freezed,Object? active = null,}) {
   return _then(_Service(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -297,7 +305,8 @@ as ServiceCategory,estimatedAmount: null == estimatedAmount ? _self.estimatedAmo
 as double,billingDay: freezed == billingDay ? _self.billingDay : billingDay // ignore: cast_nullable_to_non_nullable
 as int?,frequency: null == frequency ? _self.frequency : frequency // ignore: cast_nullable_to_non_nullable
 as ServiceFrequency,firstChargeMonth: freezed == firstChargeMonth ? _self.firstChargeMonth : firstChargeMonth // ignore: cast_nullable_to_non_nullable
-as DateTime?,active: null == active ? _self.active : active // ignore: cast_nullable_to_non_nullable
+as DateTime?,expenseCategoryId: freezed == expenseCategoryId ? _self.expenseCategoryId : expenseCategoryId // ignore: cast_nullable_to_non_nullable
+as String?,active: null == active ? _self.active : active // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

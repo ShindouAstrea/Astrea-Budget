@@ -23,6 +23,10 @@ abstract class Service with _$Service {
     /// Mes (día 1) del primer cobro: ancla del ciclo para frecuencias no
     /// mensuales. Null en servicios creados antes de existir la columna.
     @JsonKey(name: 'first_charge_month') DateTime? firstChargeMonth,
+    /// Categoría de GASTO a la que se imputa el pago (distinta de [category],
+    /// que sólo clasifica el servicio en esencial/suscripción). Sin ella, el
+    /// gasto no cuenta en los presupuestos por categoría.
+    @JsonKey(name: 'category_id') String? expenseCategoryId,
     @Default(true) bool active,
   }) = _Service;
 

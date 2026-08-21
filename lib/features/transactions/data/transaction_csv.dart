@@ -51,8 +51,10 @@ Future<void> shareTransactionsCsv({
 }) async {
   // BOM UTF-8 para que Excel detecte la codificación (tildes y eñes).
   final bytes = Uint8List.fromList(utf8.encode('\uFEFF$csv'));
-  await Share.shareXFiles(
-    [XFile.fromData(bytes, mimeType: 'text/csv')],
-    fileNameOverrides: [fileName],
+  await SharePlus.instance.share(
+    ShareParams(
+      files: [XFile.fromData(bytes, mimeType: 'text/csv')],
+      fileNameOverrides: [fileName],
+    ),
   );
 }
