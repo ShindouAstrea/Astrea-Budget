@@ -6,6 +6,13 @@ analyzer:
     # Archivos generados por build_runner (freezed / json / riverpod).
     - "**/*.freezed.dart"
     - "**/*.g.dart"
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
   errors:
     invalid_annotation_target: ignore
 
