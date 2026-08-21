@@ -1,3 +1,4 @@
+import 'package:astrea_budget/features/services/domain/service.dart';
 import 'package:astrea_budget/features/services/domain/service_schedule.dart';
 import 'package:astrea_budget/shared/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -201,6 +202,57 @@ void main() {
 
     test('febrero bisiesto llega al 29', () {
       expect(dueDateIn(DateTime(2028, 2), 31), DateTime(2028, 2, 29));
+    });
+  });
+group('Service.nextChargeFrom', () {
+    Service servicio(ServiceFrequency f, {int? day = 5, DateTime? anchor}) =>
+        Service(
+          id: 's1',
+          userId: 'u1',
+          name: 'Suscripción',
+          billingDay: day,
+          frequency: f,
+          firstChargeMonth: anchor ?? DateTime(2026, 3),
+        );
+
+    test('si el cobro del mes ya venció, salta al período siguiente', () {
+      // Anual anclado en marzo, cobra el 5. Hoy es 30 de marzo: ya pasó.
+      expect(
+        servicio(ServiceFrequency.anual).nextChargeFrom(DateTime(2026, 3, 30)),
+        DateTime(2027, 3),
+      );
+    });
+
+    test('si el cobro del mes aún no vence, es este mes', () {
+      expect(
+        servicio(ServiceFrequency.anual).nextChargeFrom(DateTime(2026, 3, 1)),
+        DateTime(2026, 3),
+      );
+      // El mismo día del cobro todavía cuenta.
+      expect(
+        servicio(ServiceFrequency.anual).nextChargeFrom(DateTime(2026, 3, 5)),
+        DateTime(2026, 3),
+      );
+    });
+
+    test('mensual vencido pasa al mes siguiente', () {
+      expect(
+        servicio(ServiceFrequency.mensual).nextChargeFrom(DateTime(2026, 3, 30)),
+        DateTime(2026, 4),
+      );
+    });
+
+    test('único ya vencido no tiene próximo cobro', () {
+      expect(
+        servicio(ServiceFrequency.unico).nextChargeFrom(DateTime(2026, 3, 30)),
+        isNull,
+      );
+    });
+
+    test('sin día de cobro no se puede generar el pago', () {
+      final s = servicio(ServiceFrequency.mensual, day: null);
+      expect(s.autoGenerates, isFalse);
+      expect(s.dueDateFor(DateTime(2026, 3)), isNull);
     });
   });
 }

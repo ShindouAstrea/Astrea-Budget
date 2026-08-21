@@ -135,6 +135,7 @@ class PaymentActions {
           categoryId: categoryId,
           accountId: account?.id,
           amount: amount,
+          serviceName: _serviceName(payment.serviceId),
         );
     _refresh(payment.serviceId);
   }
@@ -167,6 +168,17 @@ class PaymentActions {
           amount: amount,
         );
     _refresh(serviceId);
+  }
+
+  /// Nombre del servicio para describir el gasto en el historial ("Pago Netflix"
+  /// en vez de "Pago de servicio"). Null si la lista aún no está cargada.
+  String? _serviceName(String serviceId) {
+    final services = ref.read(servicesProvider).value;
+    if (services == null) return null;
+    for (final s in services) {
+      if (s.id == serviceId) return s.name;
+    }
+    return null;
   }
 
   void _refresh(String serviceId) {

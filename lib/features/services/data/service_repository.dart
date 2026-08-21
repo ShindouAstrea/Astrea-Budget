@@ -113,12 +113,16 @@ class ServiceRepository {
     return service;
   }
 
-  /// Borra los pagos futuros que la configuración actual ya no contempla:
-  /// meses fuera del ciclo (p. ej. un servicio que pasó de mensual a anual) o
-  /// todos, si el servicio quedó inactivo. Sólo toca pagos pendientes, sin
-  /// transacción asociada y sin monto ajustado a mano; lo demás es dato del
-  /// usuario y se respeta.
+  /// Borra los pagos —del mes en curso en adelante— que la configuración
+  /// actual ya no contempla: meses fuera del ciclo (un servicio que pasó de
+  /// mensual a anual), vencimientos con el día de cobro viejo, o todos si el
+  /// servicio quedó inactivo. La generación los vuelve a crear con la fecha
+  /// correcta.
+  ///
+  /// Sólo toca pagos pendientes, sin transacción asociada y sin monto ajustado
+  /// a mano; lo demás es dato del usuario y se respeta.
   Future<void> _dropObsoletePayments(Service service) async {
+    final now = _today();
     final rows = await _client
         .from('service_payments')
         .select('id, due_date')
@@ -126,13 +130,15 @@ class ServiceRepository {
         .eq('status', PaymentStatus.pendiente.wire)
         .eq('amount_overridden', false)
         .isFilter('transaction_id', null)
-        .gte('due_date', _date(_today()));
+        .gte('due_date', _date(DateTime(now.year, now.month)));
 
     final obsolete = <String>[];
     for (final row in rows) {
       final due = DateTime.parse(row['due_date'] as String);
       final month = DateTime(due.year, due.month);
-      final keep = service.autoGenerates && service.occursIn(month);
+      final keep = service.autoGenerates &&
+          service.occursIn(month) &&
+          service.dueDateFor(month) == due;
       if (!keep) obsolete.add(row['id'] as String);
     }
     if (obsolete.isEmpty) return;
@@ -186,11 +192,13 @@ class ServiceRepository {
     return rows.map(ServicePayment.fromJson).toList();
   }
 
-  /// Genera (si no existe) la instancia de pago del mes para los servicios
-  /// FIJOS activos con `billing_day` **a los que les toca cobro ese mes**
-  /// según su frecuencia: un servicio anual anclado en marzo sólo genera pago
-  /// en marzo. Idempotente gracias al UNIQUE (service_id, due_date) + upsert
-  /// que ignora duplicados (por eso un monto ya ajustado nunca se pisa).
+  /// Genera la instancia de pago del mes para los servicios FIJOS activos con
+  /// `billing_day` **a los que les toca cobro ese mes** según su frecuencia:
+  /// un servicio anual anclado en marzo sólo genera pago en marzo.
+  ///
+  /// Regla: **un pago por mes y por servicio**. Si el servicio ya tiene un pago
+  /// ese mes no se crea otro, aunque el día de cobro haya cambiado (antes eso
+  /// dejaba dos pendientes en el mismo mes: el del día viejo y el del nuevo).
   ///
   /// De paso limpia los pagos fantasma del mes: los que quedaron de la época
   /// en que todo servicio fijo cobraba mes a mes. Sólo borra pendientes, sin
@@ -204,100 +212,120 @@ class ServiceRepository {
     final auto = all.where((s) => s.autoGenerates).toList();
     if (auto.isEmpty) return;
 
-    final due = <String, DateTime>{}; // serviceId -> vencimiento del mes
-    final offSchedule = <String>[]; // ids de servicios sin cobro este mes
+    final start = DateTime(month.year, month.month);
+    final end = DateTime(month.year, month.month + 1);
+    final existing = await fetchPaymentsBetween(householdId, start, end);
+    final withPayment = {for (final p in existing) p.serviceId};
+
+    final rows = <Map<String, dynamic>>[];
+    final obsolete = <String>[];
     for (final s in auto) {
       if (s.occursIn(month)) {
-        due[s.id] = s.dueDateFor(month)!;
+        if (withPayment.contains(s.id)) continue; // ya tiene el pago del mes
+        rows.add({
+          'household_id': householdId,
+          'service_id': s.id,
+          'user_id': _uid,
+          'due_date': _date(s.dueDateFor(month)!),
+          'amount': s.estimatedAmount,
+          'status': PaymentStatus.pendiente.wire,
+        });
       } else {
-        offSchedule.add(s.id);
+        // Mes fuera del ciclo: se borran los pagos automáticos que sobraron.
+        obsolete.addAll(
+          existing
+              .where((p) => p.serviceId == s.id && _isDisposable(p))
+              .map((p) => p.id),
+        );
       }
     }
 
-    if (due.isNotEmpty) {
-      final rows = [
-        for (final s in auto)
-          if (due[s.id] != null)
-            {
-              'household_id': householdId,
-              'service_id': s.id,
-              'user_id': _uid,
-              'due_date': _date(due[s.id]!),
-              'amount': s.estimatedAmount,
-              'status': PaymentStatus.pendiente.wire,
-            },
-      ];
-      // ignoreDuplicates evita recrear pagos ya existentes para el mismo mes.
+    if (rows.isNotEmpty) {
+      // ignoreDuplicates protege ante dos clientes generando el mismo mes.
       await _client.from('service_payments').upsert(
             rows,
             onConflict: 'service_id,due_date',
             ignoreDuplicates: true,
           );
     }
-
-    if (offSchedule.isEmpty) return;
-    final start = DateTime(month.year, month.month);
-    await _client
-        .from('service_payments')
-        .delete()
-        .inFilter('service_id', offSchedule)
-        .eq('status', PaymentStatus.pendiente.wire)
-        .eq('amount_overridden', false)
-        .isFilter('transaction_id', null)
-        .gte('due_date', _date(start))
-        .lt('due_date', _date(DateTime(month.year, month.month + 1)));
+    if (obsolete.isNotEmpty) {
+      await _client.from('service_payments').delete().inFilter('id', obsolete);
+    }
   }
+
+  /// Un pago se puede borrar/regenerar sin perder información del usuario:
+  /// sigue pendiente, no tiene gasto asociado y nadie le ajustó el monto.
+  bool _isDisposable(ServicePayment p) =>
+      !p.isPaid && p.transactionId == null && !p.amountOverridden;
 
   /// Crea manualmente una instancia de pago (útil para servicios esporádicos).
   /// Queda marcada como monto propio del período (`amount_overridden`): la
   /// escribió el usuario, así que ni la propagación de monto ni la limpieza de
   /// pagos fuera de ciclo la tocan.
+  ///
+  /// La BD tiene UNIQUE (service_id, due_date): dos vencimientos del mismo
+  /// servicio no pueden compartir fecha.
   Future<ServicePayment> createPayment({
     required String householdId,
     required String serviceId,
     required DateTime dueDate,
     required int amount,
   }) async {
-    final row = await _client
-        .from('service_payments')
-        .insert({
-          'household_id': householdId,
-          'service_id': serviceId,
-          'user_id': _uid,
-          'due_date': _date(dueDate),
-          'amount': amount,
-          'amount_overridden': true,
-          'status': PaymentStatus.pendiente.wire,
-        })
-        .select()
-        .single();
-    return ServicePayment.fromJson(row);
+    try {
+      final row = await _client
+          .from('service_payments')
+          .insert({
+            'household_id': householdId,
+            'service_id': serviceId,
+            'user_id': _uid,
+            'due_date': _date(dueDate),
+            'amount': amount,
+            'amount_overridden': true,
+            'status': PaymentStatus.pendiente.wire,
+          })
+          .select()
+          .single();
+      return ServicePayment.fromJson(row);
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        throw const ServiceRepositoryException(
+          'Ese servicio ya tiene un pago con esa fecha de vencimiento.',
+        );
+      }
+      rethrow;
+    }
   }
 
   /// Ajusta el monto de UN período concreto (la suscripción subió sólo este
   /// mes, la cuenta de luz llegó más alta, etc.). Si el pago ya estaba pagado,
   /// sincroniza también la transacción de gasto que lo respalda.
   ///
-  /// Devuelve el pago actualizado.
+  /// La transacción se actualiza PRIMERO: la RLS sólo deja modificarla a su
+  /// autor, y si el ajuste lo intenta otro miembro se aborta antes de tocar el
+  /// pago (si no, el pago diría un monto y el gasto otro).
   Future<ServicePayment> updatePaymentAmount({
     required ServicePayment payment,
     required int amount,
   }) async {
+    if (payment.transactionId != null) {
+      final updated = await _client
+          .from('transactions')
+          .update({'amount': amount})
+          .eq('id', payment.transactionId!)
+          .select('id');
+      if (updated.isEmpty) {
+        throw const ServiceRepositoryException(
+          'Sólo quien registró el pago puede cambiar su monto.',
+        );
+      }
+    }
+
     final row = await _client
         .from('service_payments')
         .update({'amount': amount, 'amount_overridden': true})
         .eq('id', payment.id)
         .select()
         .single();
-
-    if (payment.transactionId != null) {
-      // RLS: sólo el autor de la transacción puede modificarla. Si el ajuste
-      // lo hace otro miembro no falla, simplemente no afecta filas.
-      await _client
-          .from('transactions')
-          .update({'amount': amount})
-          .eq('id', payment.transactionId!);
-    }
     return ServicePayment.fromJson(row);
   }
 
@@ -313,6 +341,7 @@ class ServiceRepository {
     String? accountId,
     DateTime? paidDate,
     int? amount,
+    String? serviceName,
   }) async {
     final date = paidDate ?? DateTime.now();
     final effectiveAmount = amount ?? payment.amount.round();
@@ -329,7 +358,8 @@ class ServiceRepository {
           'type': TransactionType.expense.wire,
           'amount': effectiveAmount,
           'date': _date(date),
-          'description': 'Pago de servicio',
+          'description':
+              serviceName == null ? 'Pago de servicio' : 'Pago $serviceName',
           'category_id': categoryId,
           'service_id': payment.serviceId,
         })

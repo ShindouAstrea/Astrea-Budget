@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/state_views.dart';
+import '../data/service_repository.dart';
 import '../domain/service_payment.dart';
 import 'services_controller.dart';
 
@@ -75,7 +76,9 @@ class _PaymentAmountSheetState extends ConsumerState<PaymentAmountSheet> {
       if (!mounted) return;
       context.showSuccess(alsoPay ? 'Pago registrado' : 'Monto actualizado');
       Navigator.pop(context);
-    } catch (e) {
+    } on ServiceRepositoryException catch (e) {
+      if (mounted) context.showError(e.message);
+    } catch (_) {
       if (mounted) context.showError('No se pudo actualizar el monto');
     } finally {
       if (mounted) setState(() => _saving = false);

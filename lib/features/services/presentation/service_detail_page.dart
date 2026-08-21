@@ -292,6 +292,8 @@ class _RegisterPaymentSheetState extends ConsumerState<_RegisterPaymentSheet> {
         context.showSuccess('Vencimiento registrado');
         Navigator.pop(context);
       }
+    } on ServiceRepositoryException catch (e) {
+      if (mounted) context.showError(e.message);
     } catch (_) {
       if (mounted) context.showError('No se pudo registrar el pago');
     } finally {
