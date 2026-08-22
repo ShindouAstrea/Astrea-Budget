@@ -15,6 +15,25 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseSigning = keystorePropertiesFile.exists()
 if (hasReleaseSigning) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+} else {
+    // Sin key.properties el release se firma con la clave de DEBUG. Para probar
+    // en el teléfono da igual, pero un App Bundle así lo rechaza Play Store
+    // ("está firmado con una clave incorrecta") y el error aparece recién al
+    // subirlo, después de esperar el build entero. Mejor avisar aquí, y
+    // directamente no dejar construir el bundle.
+    val tareas = gradle.startParameter.taskNames.joinToString(" ")
+    if (tareas.contains("bundle", ignoreCase = true)) {
+        throw GradleException(
+            "Falta android/key.properties: el App Bundle quedaría firmado con la " +
+                "clave de debug y Play Store lo rechazará. Crea el archivo con " +
+                "storePassword, keyPassword, keyAlias y storeFile antes de " +
+                "generar el bundle.",
+        )
+    }
+    logger.warn(
+        "ATENCIÓN: falta android/key.properties; el release se firmará con la " +
+            "clave de DEBUG (sirve para probar, no para publicar).",
+    )
 }
 
 android {

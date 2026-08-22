@@ -76,6 +76,25 @@ supabase/
    [`lib/core/config/deep_links.dart`](lib/core/config/deep_links.dart) y
    declarado en `AndroidManifest.xml` e `Info.plist`.
 
+#### Si el enlace de recuperación abre la app en el login
+
+El enlace del correo es de **un solo uso**: la app lo canjea por una sesión y a
+partir de ahí ya no sirve. Cuando ese canje falla no hay sesión, y el guard del
+router deja al usuario en el login. La app ahora muestra el motivo en un
+SnackBar; los tres habituales son:
+
+- *"El enlace ya no sirve: expiró o se usó antes"* — normalmente porque algo lo
+  abrió antes que el usuario (el escáner de enlaces de Gmail o un antivirus
+  consume el token al previsualizarlo), o porque pasó el plazo de
+  **Authentication → Email → Email OTP Expiration**. Si se repite siempre,
+  cambia la plantilla de *Reset Password* para que use
+  `{{ .TokenHash }}` en vez de `{{ .ConfirmationURL }}`, así el token no se
+  consume con un GET.
+- *"Abre el enlace en el mismo dispositivo…"* — el flujo PKCE guarda un
+  `code_verifier` local al pedir el correo; si el enlace se abre en otro
+  teléfono, en un navegador distinto o después de reinstalar, ese dato no está.
+- *"No se pudo completar: …"* — el mensaje crudo de Supabase, para el resto.
+
 ### Datos de ejemplo (seed)
 
 1. Regístrate en la app (crea el usuario y sus categorías por defecto).

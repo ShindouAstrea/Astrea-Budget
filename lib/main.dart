@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +15,11 @@ Future<void> main() async {
 
   // Mantiene el splash nativo visible durante toda la inicialización
   // (Supabase, prefs, localización) en vez de ocultarse al primer frame.
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  // En web no aplica: el splash está desactivado en pubspec (web: false), así
+  // que index.html no trae los hooks JS y la API lanzaría PlatformException.
+  if (!kIsWeb) {
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  }
 
   // Carga las variables de entorno desde el archivo .env.
   await Env.load();
@@ -29,7 +34,7 @@ Future<void> main() async {
   if (!Env.isConfigured) {
     // Falta configurar Supabase: mostramos una pantalla guía en vez de crashear.
     runApp(const _MissingConfigApp());
-    widgetsBinding.addPostFrameCallback((_) => FlutterNativeSplash.remove());
+    _removeSplash(widgetsBinding);
     return;
   }
 
@@ -48,6 +53,12 @@ Future<void> main() async {
   );
 
   // Quita el splash una vez pintado el primer frame de la app.
+  _removeSplash(widgetsBinding);
+}
+
+/// Quita el splash nativo tras el primer frame. No-op en web (ver `preserve`).
+void _removeSplash(WidgetsBinding widgetsBinding) {
+  if (kIsWeb) return;
   widgetsBinding.addPostFrameCallback((_) => FlutterNativeSplash.remove());
 }
 

@@ -18,9 +18,17 @@ class Validators {
     return null;
   }
 
+  /// Reglas para definir una contraseña (registro y cambio de contraseña).
   static String? password(String? value) {
     if (value == null || value.isEmpty) return 'La contraseña es obligatoria';
     if (value.length < 6) return 'Mínimo 6 caracteres';
+    return null;
+  }
+
+  /// Para iniciar sesión sólo se exige que venga algo: el largo mínimo es una
+  /// regla del registro, y una cuenta creada antes podría tener una más corta.
+  static String? passwordRequired(String? value) {
+    if (value == null || value.isEmpty) return 'La contraseña es obligatoria';
     return null;
   }
 

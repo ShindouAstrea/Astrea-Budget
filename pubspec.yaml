@@ -1,7 +1,7 @@
 name: astrea_budget
 description: "Astrea Budget — control visual de ingresos y gastos mes a mes (CLP / es_CL)."
 publish_to: 'none'
-version: 3.1.0+6
+version: 3.1.1+7
 
 environment:
   sdk: ^3.12.0
@@ -22,6 +22,10 @@ dependencies:
 
   # Backend (Supabase: Postgres + Auth + RLS)
   supabase_flutter: ^2.8.0
+
+  # Deep links de los correos de Supabase. Ya viene con supabase_flutter, pero
+  # el router lo usa directo para leer el error que trae el enlace caducado.
+  app_links: ^7.2.1
 
   # Modelos inmutables
   freezed_annotation: ^3.1.0

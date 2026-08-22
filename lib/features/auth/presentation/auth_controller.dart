@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/auth_error_messages.dart';
 import '../data/auth_repository.dart';
 
 /// Controla las acciones de autenticación y expone su estado de carga/error.
@@ -55,7 +56,7 @@ class AuthController extends AsyncNotifier<void> {
       state = const AsyncData(null);
       return true;
     } on AuthException catch (e) {
-      state = AsyncError(_friendlyMessage(e), StackTrace.current);
+      state = AsyncError(authErrorMessage(e), StackTrace.current);
       return false;
     } catch (_) {
       state = AsyncError(
@@ -64,42 +65,6 @@ class AuthController extends AsyncNotifier<void> {
       );
       return false;
     }
-  }
-
-  /// Traduce los errores de Supabase a mensajes amigables (sin filtrar
-  /// información sensible).
-  String _friendlyMessage(AuthException e) {
-    final msg = e.message.toLowerCase();
-    if (msg.contains('invalid login')) return 'Correo o contraseña incorrectos';
-    if (msg.contains('already registered') ||
-        msg.contains('already exists') ||
-        msg.contains('already in use')) {
-      return 'Ya existe una cuenta con este correo';
-    }
-    if (msg.contains('anonymous sign-ins are disabled')) {
-      return 'El modo invitado no está habilitado. '
-          'Activa "Anonymous sign-ins" en el dashboard de Supabase.';
-    }
-    if (msg.contains('email not confirmed')) {
-      return 'Debes confirmar tu correo antes de iniciar sesión';
-    }
-    if (msg.contains('rate limit')) {
-      return 'Demasiados intentos. Espera un momento e inténtalo de nuevo';
-    }
-    if (msg.contains('password')) {
-      return 'La contraseña no cumple los requisitos (mínimo 6 caracteres)';
-    }
-    // Falla del trigger de base de datos (típicamente el schema.sql no se ha
-    // ejecutado en Supabase). Mostramos la causa para no dejarlo a ciegas.
-    if (msg.contains('database error')) {
-      return 'Error de base de datos al crear el usuario. '
-          'Verifica que ejecutaste supabase/schema.sql en tu proyecto.';
-    }
-    // Para errores no contemplados, exponemos el mensaje real (sin datos
-    // sensibles) para facilitar el diagnóstico.
-    return e.message.isNotEmpty
-        ? 'No se pudo completar: ${e.message}'
-        : 'No se pudo completar la acción. Verifica tus datos';
   }
 }
 
@@ -125,4 +90,26 @@ class PasswordRecoveryNotifier extends Notifier<bool> {
 final passwordRecoveryProvider =
     NotifierProvider<PasswordRecoveryNotifier, bool>(
   PasswordRecoveryNotifier.new,
+);
+
+/// Último error de un enlace de correo (recuperar contraseña o confirmar
+/// cuenta), pendiente de mostrarse.
+///
+/// Cuando el enlace falla, Supabase no lanza la excepción hacia quien la pidió:
+/// la publica como error del stream `onAuthStateChange`. Nadie la escuchaba, y
+/// como sin sesión el guard manda al login, la app se abría ahí muda. El router
+/// deja aquí el mensaje y la pantalla de login lo muestra.
+class AuthLinkErrorNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void report(String message) => state = message;
+
+  /// La consume la pantalla que ya la mostró, para no repetirla.
+  void clear() => state = null;
+}
+
+final authLinkErrorProvider =
+    NotifierProvider<AuthLinkErrorNotifier, String?>(
+  AuthLinkErrorNotifier.new,
 );

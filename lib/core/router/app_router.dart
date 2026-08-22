@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/auth/data/auth_error_messages.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
@@ -38,26 +41,78 @@ final _rootKey = GlobalKey<NavigatorState>();
 /// bloqueo. Escucha **directamente** el stream de auth de Supabase (más fiable
 /// que pasar por un provider) y, vía `ref.listen`, el estado de bloqueo.
 class _RouterRefresh extends ChangeNotifier {
-  _RouterRefresh(Ref ref) {
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      // El enlace de "recuperar contraseña" abre la app por deep link: el SDK
-      // canjea el código, deja una sesión y emite este evento. Sin la bandera,
-      // el guard mandaría al inicio sin pedir la contraseña nueva.
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        ref.read(passwordRecoveryProvider.notifier).start();
-      }
-      notifyListeners();
-    });
-    ref.listen(appLockProvider, (_, _) => notifyListeners());
-    ref.listen(onboardingSeenProvider, (_, _) => notifyListeners());
-    ref.listen(passwordRecoveryProvider, (_, _) => notifyListeners());
+  _RouterRefresh(this._ref) {
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (data) {
+        // El enlace de "recuperar contraseña" abre la app por deep link: el SDK
+        // canjea el código, deja una sesión y emite este evento. Sin la bandera,
+        // el guard mandaría al inicio sin pedir la contraseña nueva.
+        if (data.event == AuthChangeEvent.passwordRecovery) {
+          _ref.read(passwordRecoveryProvider.notifier).start();
+        }
+        notifyListeners();
+      },
+      // Aquí es donde Supabase publica los fallos de los deep links (enlace
+      // caducado, código ya usado, `code_verifier` de otro dispositivo). Sin
+      // este handler se perdían: la app quedaba en el login sin decir nada.
+      onError: (Object error, StackTrace _) {
+        if (error is AuthException) _report(authErrorMessage(error));
+      },
+    );
+
+    // El propio enlace puede traer el error en la URL
+    // (`?error=access_denied&error_code=otp_expired`). En ese caso Supabase
+    // lanza la excepción antes de cualquier llamada de red, así que puede
+    // ocurrir antes de que exista esta suscripción: lo leemos también del
+    // enlace para no depender de ese orden.
+    _watchDeepLinks();
+
+    _ref.listen(appLockProvider, (_, _) => notifyListeners());
+    _ref.listen(onboardingSeenProvider, (_, _) => notifyListeners());
+    _ref.listen(passwordRecoveryProvider, (_, _) => notifyListeners());
   }
 
+  final Ref _ref;
   late final StreamSubscription<AuthState> _authSub;
+  StreamSubscription<Uri>? _linkSub;
+
+  /// Evita mostrar dos veces el mismo enlace: al arrancar en frío llega por
+  /// `getInitialLink()` y también por el stream.
+  String? _lastHandledLink;
+
+  void _watchDeepLinks() {
+    if (kIsWeb) return;
+    final links = AppLinks();
+    _linkSub = links.uriLinkStream.listen(
+      _inspectLink,
+      onError: (Object _, StackTrace _) {},
+    );
+    // El enlace que arrancó la app no se reemite en el stream si otro oyente
+    // (el propio SDK de Supabase) se suscribió antes.
+    unawaited(
+      links.getInitialLink().then(
+        (uri) => uri == null ? null : _inspectLink(uri),
+        onError: (Object _, StackTrace _) {},
+      ),
+    );
+  }
+
+  void _inspectLink(Uri uri) {
+    final key = uri.toString();
+    if (key == _lastHandledLink) return;
+    _lastHandledLink = key;
+
+    final message = authLinkErrorMessage(uri);
+    if (message != null) _report(message);
+  }
+
+  void _report(String message) =>
+      _ref.read(authLinkErrorProvider.notifier).report(message);
 
   @override
   void dispose() {
     _authSub.cancel();
+    _linkSub?.cancel();
     super.dispose();
   }
 }

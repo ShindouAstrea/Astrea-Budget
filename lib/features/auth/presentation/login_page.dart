@@ -22,6 +22,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _obscure = true;
 
   @override
+  void initState() {
+    super.initState();
+    // El error del enlace puede haberse reportado antes de que esta pantalla
+    // existiera (arranque en frío desde el correo), y ahí `ref.listen` no lo
+    // vería nunca porque sólo reacciona a cambios posteriores.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showLinkError());
+  }
+
+  void _showLinkError() {
+    if (!mounted) return;
+    final message = ref.read(authLinkErrorProvider);
+    if (message == null) return;
+    context.showError(message);
+    ref.read(authLinkErrorProvider.notifier).clear();
+  }
+
+  @override
   void dispose() {
     _email.dispose();
     _password.dispose();
@@ -50,6 +67,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Un enlace de correo que falló (caducado, ya usado, de otro dispositivo)
+    // deja al usuario aquí: sin esto, la app se abría en el login sin explicar
+    // por qué no pasó nada.
+    ref.listen(authLinkErrorProvider, (_, message) {
+      if (message != null) _showLinkError();
+    });
+
     final isLoading = ref.watch(authControllerProvider).isLoading;
     final scheme = Theme.of(context).colorScheme;
 
@@ -113,7 +137,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
-                      validator: Validators.password,
+                      validator: Validators.passwordRequired,
                     ),
                     Align(
                       alignment: Alignment.centerRight,
