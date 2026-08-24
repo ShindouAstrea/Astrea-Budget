@@ -1,11 +1,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Requerido para hablar con Supabase (auth + datos). Va en el manifest
+         MAIN: los de debug/ y profile/ sólo aplican a esos build types, así
+         que sin esta línea el build de release (Play Store) queda SIN red y
+         toda llamada falla como "no pudimos conectarnos". -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Requerido por local_auth para la autenticación biométrica. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <!-- Requerido para notificaciones locales (Android 13+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- La sesión de Supabase y la caché offline viven en SharedPreferences.
+         Con el backup automático de Android (activo por defecto) Google Play
+         las restaura al reinstalar: la app se abría con una sesión vieja,
+         saltándose el login y mostrando datos cacheados del usuario anterior.
+         Los datos reales están en la nube, no hay nada que respaldar aquí. -->
     <application
         android:label="Astrea Budget"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

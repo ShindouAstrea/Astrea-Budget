@@ -82,7 +82,18 @@ class AuthRepository {
     await _auth.updateUser(UserAttributes(password: password));
   }
 
-  Future<void> signOut() async => _auth.signOut();
+  /// Cierra la sesión. El SDK borra la sesión local **antes** de avisar al
+  /// servidor, así que aunque esa llamada falle (sin conexión, token ya
+  /// vencido) el usuario queda igualmente fuera. Propagar el error sólo
+  /// conseguía mostrar "no se pudo cerrar sesión" sobre una sesión ya cerrada:
+  /// el mensaje contradecía lo que el usuario veía pasar.
+  Future<void> signOut() async {
+    try {
+      await _auth.signOut();
+    } on AuthException catch (_) {
+      // Sesión local ya limpiada; el refresh token caduca solo en el servidor.
+    }
+  }
 
   /// Elimina la cuenta de invitado y TODOS sus datos (el borrado en
   /// `auth.users` cascadea a perfil, household, transacciones, etc.) y luego

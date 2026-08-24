@@ -57,6 +57,17 @@ class LocalCache {
       return decoded.map((k, v) => MapEntry(k, (v as num).toDouble()));
     }
   }
+
+  /// Borra toda la caché guardada. Se llama al cerrar sesión: las claves
+  /// llevan el id de usuario/household, pero dejarlas ahí significa que un
+  /// backup del dispositivo (o el siguiente usuario del teléfono) se lleve los
+  /// montos del anterior. Nada de esto es fuente de verdad: está en la nube.
+  Future<void> clear() async {
+    final keys = _prefs.getKeys().where((k) => k.startsWith(_prefix)).toList();
+    for (final key in keys) {
+      await _prefs.remove(key);
+    }
+  }
 }
 
 final localCacheProvider = Provider<LocalCache>(

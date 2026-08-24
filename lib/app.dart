@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/data/local_cache.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -57,6 +60,12 @@ class _AstreaBudgetAppState extends ConsumerState<AstreaBudgetApp>
       final event = next.value?.event;
       if (event == AuthChangeEvent.signedIn ||
           event == AuthChangeEvent.signedOut) {
+        // Al salir se tira además la caché offline en disco: sus claves
+        // llevan el uid, pero dejarla ahí hace que la próxima sesión (u
+        // otra persona en el mismo teléfono) vea montos que no son suyos.
+        if (event == AuthChangeEvent.signedOut) {
+          unawaited(ref.read(localCacheProvider).clear());
+        }
         // Re-lee la selección con la clave del nuevo usuario y refresca los
         // datos por-usuario (cascada para el resto vía activeHouseholdId).
         ref.invalidate(currentHouseholdIdProvider);
